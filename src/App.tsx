@@ -104,6 +104,8 @@ function BookNowPage({ user }: { user: User | null }) {
             <ul>
               <li>Booking is tied to your signed-in account.</li>
               <li>Verify your account details before first booking.</li>
+              <li>Choose one package: Exterior, Interior, or Full Detail.</li>
+              <li>Upload a car photo so final pricing can be reviewed.</li>
               <li>Pick your preferred date and time.</li>
               <li>Add notes for vehicle size or requests.</li>
             </ul>

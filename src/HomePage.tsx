@@ -65,16 +65,6 @@ function FadeIn({
   );
 }
 
-function Stars({ count }: { count: number }) {
-  return (
-    <div className="hp-stars">
-      {Array.from({ length: count }).map((_, index) => (
-        <span key={index}>★</span>
-      ))}
-    </div>
-  );
-}
-
 type GalleryItem = {
   id: string;
   title: string;
@@ -82,14 +72,6 @@ type GalleryItem = {
   tone: string;
   sortOrder: number;
   isFeatured: boolean;
-  isEnabled: boolean;
-};
-
-type ReviewItem = {
-  id: string;
-  name: string;
-  text: string;
-  rating: number;
   isEnabled: boolean;
 };
 
@@ -101,20 +83,25 @@ type NewsItem = {
   isEnabled: boolean;
 };
 
+const NEWS_SEEN_KEY = 'td_news_last_seen_id';
+
 const services = [
   {
     icon: 'EX',
     title: 'Exterior Refresh',
+    price: '$50',
     desc: 'Hand wash, dry, wheels, and glass cleaned for a solid reset.',
   },
   {
     icon: 'IN',
     title: 'Interior Reset',
+    price: '$50',
     desc: 'Vacuum, wipe-down, and the main interior surfaces cleaned up properly.',
   },
   {
     icon: 'FD',
     title: 'Full Detail',
+    price: '$70',
     desc: 'A complete inside-and-out service for the cleanest overall finish.',
   },
 ];
@@ -156,16 +143,6 @@ function toGalleryItem(id: string, data: DocumentData): GalleryItem {
   };
 }
 
-function toReviewItem(id: string, data: DocumentData): ReviewItem {
-  return {
-    id,
-    name: String(data.name ?? ''),
-    text: String(data.text ?? ''),
-    rating: Number(data.rating ?? 5),
-    isEnabled: data.isEnabled !== false,
-  };
-}
-
 function toNewsItem(id: string, data: DocumentData): NewsItem {
   return {
     id,
@@ -174,6 +151,13 @@ function toNewsItem(id: string, data: DocumentData): NewsItem {
     body: String(data.body ?? ''),
     isEnabled: data.isEnabled !== false,
   };
+}
+
+function getUpdatePoints(body: string): string[] {
+  return body
+    .split(/\n|;|•/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export default function HomePage({
@@ -185,8 +169,8 @@ export default function HomePage({
 }) {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [newsOpen, setNewsOpen] = useState(false);
+  const [unseenNewsCount, setUnseenNewsCount] = useState(0);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(fallbackGallery);
-  const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
 
   useEffect(() => {
@@ -194,6 +178,47 @@ export default function HomePage({
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    if (newsItems.length === 0) {
+      setUnseenNewsCount(0);
+      return;
+    }
+
+    const lastSeenId = localStorage.getItem(NEWS_SEEN_KEY);
+    if (!lastSeenId) {
+      setUnseenNewsCount(newsItems.length);
+      return;
+    }
+
+    const seenIndex = newsItems.findIndex((item) => item.id === lastSeenId);
+    if (seenIndex === -1) {
+      setUnseenNewsCount(newsItems.length);
+      return;
+    }
+
+    setUnseenNewsCount(seenIndex);
+  }, [newsItems]);
+
+  function openNewsPanel() {
+    setNewsOpen(true);
+    if (newsItems.length > 0) {
+      localStorage.setItem(NEWS_SEEN_KEY, newsItems[0].id);
+      setUnseenNewsCount(0);
+    }
+  }
+
+  function closeNewsPanel() {
+    setNewsOpen(false);
+  }
+
+  function toggleNewsPanel() {
+    if (newsOpen) {
+      closeNewsPanel();
+    } else {
+      openNewsPanel();
+    }
+  }
 
   useEffect(() => {
     const unsubGallery = onSnapshot(
@@ -208,20 +233,6 @@ export default function HomePage({
       },
       () => {
         setGalleryItems(fallbackGallery);
-      }
-    );
-
-    const unsubReviews = onSnapshot(
-      collection(db, 'reviews'),
-      (snap) => {
-        const rows = snap.docs
-          .map((docSnap) => toReviewItem(docSnap.id, docSnap.data()))
-          .filter((item) => item.isEnabled)
-          .slice(0, 6);
-        setReviewItems(rows);
-      },
-      () => {
-        setReviewItems([]);
       }
     );
 
@@ -241,7 +252,6 @@ export default function HomePage({
 
     return () => {
       unsubGallery();
-      unsubReviews();
       unsubNews();
     };
   }, []);
@@ -277,8 +287,8 @@ export default function HomePage({
             </h1>
 
             <p className="hp-sub">
-              Mobile detailing with a cleaner booking flow, clear packages, and room to show your
-              best work without crowding the page.
+              Mobile detailing with clear packages, account-based booking, and straightforward site
+              updates.
             </p>
 
             <div className="hp-hero-actions">
@@ -334,7 +344,7 @@ export default function HomePage({
       <section className="hp-section">
         <FadeIn>
           <div className="hp-section-label">Services</div>
-          <h2 className="hp-section-heading">Simple service choices</h2>
+          <h2 className="hp-section-heading">Services</h2>
         </FadeIn>
         <div className="hp-services-grid hp-services-grid--compact">
           {services.map((service, index) => (
@@ -342,6 +352,7 @@ export default function HomePage({
               <article className="hp-service-card">
                 <div className="hp-service-icon">{service.icon}</div>
                 <h3>{service.title}</h3>
+                <p className="hp-service-price">{service.price}</p>
                 <p>{service.desc}</p>
                 <a className="hp-service-link" href="#/pricing">
                   Check package details
@@ -355,7 +366,7 @@ export default function HomePage({
       <section className="hp-section hp-booking-section">
         <FadeIn>
           <div className="hp-section-label">How To Book</div>
-          <h2 className="hp-section-heading">A straightforward process</h2>
+          <h2 className="hp-section-heading">How booking works</h2>
         </FadeIn>
         <div className="hp-process-layout">
           <div className="hp-process-grid">
@@ -385,7 +396,7 @@ export default function HomePage({
       <section className="hp-section">
         <FadeIn>
           <div className="hp-section-label">Gallery</div>
-          <h2 className="hp-section-heading">Work worth showing</h2>
+          <h2 className="hp-section-heading">Recent work</h2>
         </FadeIn>
         <div className="hp-gallery-showcase">
           <FadeIn className="hp-gallery-feature">
@@ -401,8 +412,7 @@ export default function HomePage({
             <div className="hp-gallery-copy">
               <strong>{featuredGallery?.title || 'Featured detail'}</strong>
               <p>
-                Showcase your latest work here and keep the gallery updated as new details are
-                completed.
+                Real photos added by your team from the dashboard gallery editor.
               </p>
             </div>
           </FadeIn>
@@ -421,31 +431,11 @@ export default function HomePage({
         </div>
       </section>
 
-      {reviewItems.length > 0 && (
-        <section className="hp-section">
-          <FadeIn>
-            <div className="hp-section-label">Customer Reviews</div>
-            <h2 className="hp-section-heading">What customers are saying</h2>
-          </FadeIn>
-          <div className="hp-reviews-grid">
-            {reviewItems.map((review, index) => (
-              <FadeIn key={review.id} delay={index * 70}>
-                <article className="hp-review-card">
-                  <Stars count={Math.max(1, Math.min(5, review.rating || 5))} />
-                  <p className="hp-review-text">"{review.text}"</p>
-                  <span className="hp-review-name">{review.name}</span>
-                </article>
-              </FadeIn>
-            ))}
-          </div>
-        </section>
-      )}
-
       <section className="hp-cta-section">
         <FadeIn>
           <div className="hp-cta-inner">
             <h2>Ready to book?</h2>
-            <p>Choose your package, request a time, and keep the rest simple.</p>
+            <p>Choose a package and request a time.</p>
             <div className="hp-cta-actions">
               <a className="hp-btn-primary hp-btn-large" href="#/book-now">
                 Book Now
@@ -479,31 +469,51 @@ export default function HomePage({
         <div className="hp-footer-bottom">© {new Date().getFullYear()} TD Detailed</div>
       </footer>
 
-      <button
-        type="button"
-        className={`hp-news-toggle${newsOpen ? ' hp-news-toggle-open' : ''}`}
-        onClick={() => setNewsOpen((prev) => !prev)}
-      >
-        {newsOpen ? 'Close Updates' : 'Site Updates'}
-      </button>
+      {!newsOpen && (
+        <button
+          type="button"
+          className="hp-news-toggle"
+          onClick={toggleNewsPanel}
+        >
+          <span className="hp-news-toggle-text">Site Updates</span>
+          {unseenNewsCount > 0 && <span className="hp-news-badge">{unseenNewsCount}</span>}
+        </button>
+      )}
 
       <aside className={`hp-news-panel${newsOpen ? ' hp-news-panel-open' : ''}`}>
         <div className="hp-news-head">
-          <h3>What&apos;s New</h3>
-          <button type="button" onClick={() => setNewsOpen(false)} aria-label="Close updates panel">
+          <div>
+            <h3>What&apos;s New</h3>
+            <p className="hp-news-sub">Version notes and recent site updates</p>
+          </div>
+          <button type="button" onClick={closeNewsPanel} aria-label="Close updates panel">
             ×
           </button>
         </div>
 
         <div className="hp-news-body">
-          {newsItems.length === 0 && <p>No updates posted yet.</p>}
-          {newsItems.map((news) => (
-            <article key={news.id} className="hp-news-item">
+          {newsItems.length === 0 && <p className="hp-news-empty">No updates posted yet.</p>}
+          {newsItems.map((news, index) => (
+            <article key={news.id} className={`hp-news-item${index === 0 ? ' hp-news-item-latest' : ''}`}>
               <div className="hp-news-title-row">
                 <strong>{news.title}</strong>
-                {news.version && <span className="hp-news-version">{news.version}</span>}
+                <span className="hp-news-id">Update {String(newsItems.length - index).padStart(2, '0')}</span>
               </div>
-              <p>{news.body}</p>
+
+              <div className="hp-news-meta-row">
+                {news.version ? <span className="hp-news-version">{news.version}</span> : <span className="hp-news-version hp-news-version-muted">General</span>}
+                {index === 0 && <span className="hp-news-latest-pill">Latest</span>}
+              </div>
+
+              {getUpdatePoints(news.body).length > 1 ? (
+                <ul className="hp-news-points">
+                  {getUpdatePoints(news.body).map((point, pointIndex) => (
+                    <li key={`${news.id}-${pointIndex}`}>{point}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>{news.body}</p>
+              )}
             </article>
           ))}
         </div>

@@ -471,6 +471,14 @@
   letter-spacing: 0.04em;
 }
 
+.hp-service-price {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: #111;
+  line-height: 1;
+}
+
 .hp-service-card p {
   margin: 0;
   font-size: 0.88rem;
@@ -1447,9 +1455,30 @@
   background: #181613;
   color: #fff;
   padding: 10px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   letter-spacing: 0.03em;
   cursor: pointer;
+}
+
+.hp-news-toggle-text {
+  line-height: 1;
+}
+
+.hp-news-badge {
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #fff;
+  color: #181613;
+  font-size: 0.74rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
 }
 
 .hp-news-toggle:hover,
@@ -1458,27 +1487,37 @@
   color: #181613;
 }
 
+.hp-news-toggle:hover .hp-news-badge,
+.hp-news-toggle-open .hp-news-badge {
+  background: #181613;
+  color: #fff;
+}
+
 .hp-news-panel {
   position: fixed;
-  top: 0;
-  right: -360px;
-  width: min(360px, 92vw);
-  height: 100vh;
+  top: auto;
+  bottom: 24px;
+  right: -380px;
+  width: min(340px, 92vw);
+  height: min(480px, 70vh);
   background: rgba(252, 251, 248, 0.98);
-  border-left: 1px solid rgba(24, 22, 19, 0.14);
-  box-shadow: -12px 0 28px rgba(24, 22, 19, 0.12);
+  border: 1px solid rgba(24, 22, 19, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 16px 34px rgba(24, 22, 19, 0.16);
   z-index: 1140;
   display: grid;
   grid-template-rows: auto 1fr;
-  transition: right 0.25s ease;
+  transition: right 0.25s ease, opacity 0.25s ease;
+  opacity: 0;
 }
 
 .hp-news-panel-open {
-  right: 0;
+  right: 16px;
+  opacity: 1;
 }
 
 .hp-news-head {
-  padding: 18px;
+  padding: 14px;
   border-bottom: 1px solid rgba(24, 22, 19, 0.1);
   display: flex;
   justify-content: space-between;
@@ -1490,6 +1529,12 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.9rem;
+}
+
+.hp-news-sub {
+  margin: 5px 0 0;
+  font-size: 0.8rem;
+  color: #6a635b;
 }
 
 .hp-news-head button {
@@ -1509,18 +1554,23 @@
 
 .hp-news-body {
   overflow-y: auto;
-  padding: 14px 16px 24px;
+  padding: 12px 12px 14px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .hp-news-item {
   border: 1px solid rgba(24, 22, 19, 0.1);
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px;
   background: #fff;
   display: grid;
-  gap: 8px;
+  gap: 7px;
+}
+
+.hp-news-item-latest {
+  border-color: rgba(24, 22, 19, 0.2);
+  box-shadow: 0 8px 18px rgba(24, 22, 19, 0.08);
 }
 
 .hp-news-title-row {
@@ -1530,18 +1580,71 @@
   align-items: center;
 }
 
+.hp-news-id {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7c756d;
+}
+
+.hp-news-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .hp-news-version {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #5a544d;
+  border: 1px solid rgba(24, 22, 19, 0.16);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.hp-news-version-muted {
+  border-color: rgba(24, 22, 19, 0.1);
+  color: #7b746c;
 }
 
 .hp-news-item p {
   margin: 0;
   color: #4e4944;
   line-height: 1.5;
+}
+
+.hp-news-points {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: #4e4944;
+}
+
+.hp-news-points li {
+  line-height: 1.45;
+}
+
+.hp-news-latest-pill {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(24, 22, 19, 0.2);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #181613;
+}
+
+.hp-news-empty {
+  margin: 6px 0 0;
+  color: #6a635b;
 }
 
 .booking-auth-prompt {
@@ -2726,7 +2829,19 @@ p {
 
 .pricing-header {
   display: grid;
-  gap: 8px;
+  gap: 6px;
+}
+
+.pricing-header h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  letter-spacing: -0.02em;
+}
+
+.pricing-subtitle {
+  margin: 0;
+  color: #5f5a54;
+  font-size: 0.96rem;
 }
 
 .schema-note {
@@ -2752,17 +2867,43 @@ p {
 
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
 }
 
 .price-card {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px;
-  background: #fff;
+  border: 1px solid #dfd8cf;
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(180deg, #fffdf9 0%, #ffffff 100%);
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  box-shadow: 0 10px 26px rgba(41, 28, 12, 0.07);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.price-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 34px rgba(41, 28, 12, 0.11);
+}
+
+.price-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d9cfbf;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #635a4d;
 }
 
 .price-row {
@@ -2775,14 +2916,41 @@ p {
 .price-row h3 {
   margin: 0;
   text-transform: uppercase;
-  font-size: 1rem;
+  font-size: 1.03rem;
   letter-spacing: 0.04em;
 }
 
 .price-value {
   font-weight: 800;
-  font-size: 1.03rem;
+  font-size: 1.2rem;
   color: #0f0f10;
+}
+
+.price-description {
+  margin: 0;
+  color: #4f4a44;
+  line-height: 1.6;
+}
+
+.price-view-btn {
+  justify-self: start;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.price-view-btn:hover {
+  background: #fff;
+  color: #111;
+  transform: translateY(-1px);
 }
 
 .offer-tag {
@@ -2796,6 +2964,135 @@ p {
   font-weight: 800;
   background: #111;
   color: #fff;
+}
+
+.price-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.46);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 13000;
+}
+
+.price-modal {
+  width: min(620px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid #d8cec0;
+  background: #fffdf9;
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.28);
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.price-modal-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.price-modal-kicker {
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font-size: 0.7rem;
+  color: #6c6457;
+  font-weight: 800;
+}
+
+.price-modal-head h3 {
+  margin: 0;
+  font-size: 1.38rem;
+}
+
+.price-modal-close {
+  border: 1px solid #111;
+  background: #fff;
+  color: #111;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.price-modal-value {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.price-modal-summary {
+  margin: 0;
+  color: #4f4a44;
+}
+
+.price-modal-block {
+  border: 1px solid #e2d9cd;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.price-modal-block h4 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.price-modal-block ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.price-modal-meta {
+  margin: 0;
+  color: #3f3a34;
+}
+
+.price-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.price-modal-book,
+.price-modal-secondary {
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.price-modal-book {
+  text-decoration: none;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+}
+
+.price-modal-book:hover {
+  background: #fff;
+  color: #111;
+}
+
+.price-modal-secondary {
+  border: 1px solid #111;
+  background: #fff;
+  color: #111;
+  cursor: pointer;
 }
 
 .booking-panel {
@@ -2816,6 +3113,7 @@ p {
 }
 
 .booking-panel input,
+.booking-panel select,
 .booking-panel textarea {
   width: 100%;
   border: 1px solid #212123;
@@ -2831,6 +3129,70 @@ p {
 .booking-panel textarea {
   min-height: 90px;
   resize: vertical;
+}
+
+.booking-photo-preview {
+  width: min(100%, 360px);
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  object-fit: cover;
+}
+
+.dash-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.dash-photo-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dash-photo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.dash-photo-card a {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+}
+
+.dash-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.dash-photo-card:hover .dash-photo-img {
+  transform: scale(1.05);
+}
+
+.dash-photo-info {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+.dash-photo-info strong {
+  font-size: 0.85rem;
+}
+
+.dash-photo-info span {
+  color: #666;
 }
 
 .booking-panel button {

@@ -14,6 +14,7 @@ import { db } from './firebase';
 
 type DashTab =
   | 'bookings'
+  | 'photos'
   | 'users'
   | 'admin'
   | 'prices'
@@ -26,6 +27,10 @@ type Booking = {
   customerName: string;
   phone: string;
   address: string;
+  packageType: string;
+  packageLabel: string;
+  basePrice: number | null;
+  carPhotoUrl: string;
   bookedByUid: string;
   bookedByEmail: string;
   date: string;
@@ -123,11 +128,16 @@ type NewsForm = {
 };
 
 function toBooking(id: string, data: DocumentData): Booking {
+  const rawBasePrice = data.basePrice;
   return {
     id,
     customerName: String(data.customerName ?? ''),
     phone: String(data.phone ?? ''),
     address: String(data.address ?? ''),
+    packageType: String(data.packageType ?? ''),
+    packageLabel: String(data.packageLabel ?? ''),
+    basePrice: typeof rawBasePrice === 'number' ? rawBasePrice : null,
+    carPhotoUrl: String(data.carPhotoUrl ?? ''),
     bookedByUid: String(data.bookedByUid ?? ''),
     bookedByEmail: String(data.bookedByEmail ?? ''),
     date: String(data.date ?? ''),
@@ -263,6 +273,7 @@ export default function DetailerDashboard({
 
   const [showCreatePrice, setShowCreatePrice] = useState(false);
   const [createPriceBusy, setCreatePriceBusy] = useState(false);
+  const [seedPriceBusy, setSeedPriceBusy] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState('');
   const [priceEditBusy, setPriceEditBusy] = useState(false);
   const [priceCreateForm, setPriceCreateForm] = useState<PriceCreateForm>({
@@ -460,6 +471,34 @@ export default function DetailerDashboard({
       );
     } finally {
       setActionBusyId('');
+    }
+  }
+
+  const DEFAULT_PRICE_PACKAGES = [
+    { detailName: 'Exterior Refresh', price: 50, description: 'Hand wash, dry, wheels, and glass cleaned for a solid reset.', displayOrder: 1 },
+    { detailName: 'Interior Reset', price: 50, description: 'Vacuum, wipe-down, and main interior surfaces cleaned.', displayOrder: 2 },
+    { detailName: 'Full Detail', price: 70, description: 'Complete interior and exterior detail service.', displayOrder: 3 },
+  ];
+
+  async function seedDefaultPrices() {
+    setSeedPriceBusy(true);
+    resetActionMessages();
+    try {
+      for (const pkg of DEFAULT_PRICE_PACKAGES) {
+        await addDoc(collection(db, 'pricing'), {
+          ...pkg,
+          isEnabled: true,
+          isSpecialOffer: false,
+          createdAt: serverTimestamp(),
+        });
+      }
+      setActionSuccess('Default packages added. You can now edit them.');
+    } catch (err) {
+      setActionError(
+        err instanceof FirebaseError ? `Seed failed: ${err.code}` : 'Seed failed.'
+      );
+    } finally {
+      setSeedPriceBusy(false);
     }
   }
 
@@ -899,7 +938,7 @@ export default function DetailerDashboard({
       </div>
 
       <div className="dash-tabs">
-        {(['bookings', 'users', 'admin', 'prices', 'gallery', 'reviews', 'news'] as DashTab[]).map((t) => (
+        {(['bookings', 'photos', 'users', 'admin', 'prices', 'gallery', 'reviews', 'news'] as DashTab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -969,12 +1008,26 @@ export default function DetailerDashboard({
                       <strong>{b.customerName || '(no name)'}</strong>
                       <span>Account: {b.bookedByEmail || '(missing email)'}</span>
                       <span>User ID: {b.bookedByUid || '(missing uid)'}</span>
+                      <span>
+                        Package: {b.packageLabel || b.packageType || '(missing package)'}
+                        {b.basePrice != null ? ` ($${b.basePrice})` : ''}
+                      </span>
                       <span>{b.phone || '(missing phone)'}</span>
                       <span>{b.address || '(missing address)'}</span>
                       <span>{b.date} at {b.time}</span>
+                      {b.carPhotoUrl && (
+                        <a href={b.carPhotoUrl} target="_blank" rel="noreferrer">
+                          View uploaded car photo
+                        </a>
+                      )}
                       {b.notes && <span className="dash-notes">{b.notes}</span>}
                     </div>
                     <div className="dash-row-right">
+                      {b.carPhotoUrl && (
+                        <a href={b.carPhotoUrl} target="_blank" rel="noreferrer">
+                          <img className="dash-thumb" src={b.carPhotoUrl} alt="Car upload" />
+                        </a>
+                      )}
                       <span className="dash-badge">{b.status || 'pending'}</span>
                       <div className="dash-row-actions">
                         <button
@@ -1063,6 +1116,35 @@ export default function DetailerDashboard({
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === 'photos' && (
+          <>
+            {bookings.loading && <p className="dash-meta">Loading...</p>}
+            {bookings.error && <p className="dash-error">{bookings.error}</p>}
+            {!bookings.loading && !bookings.error && (bookings.items as Booking[]).filter((b) => b.carPhotoUrl).length === 0 && (
+              <p className="dash-meta">No booking photos yet.</p>
+            )}
+            {!bookings.loading && !bookings.error && (
+              <div className="dash-photos-grid">
+                {(bookings.items as Booking[])
+                  .filter((b) => b.carPhotoUrl)
+                  .map((b) => (
+                    <div className="dash-photo-card" key={b.id}>
+                      <a href={b.carPhotoUrl} target="_blank" rel="noreferrer">
+                        <img src={b.carPhotoUrl} alt={`${b.customerName} car`} className="dash-photo-img" />
+                      </a>
+                      <div className="dash-photo-info">
+                        <strong>{b.customerName}</strong>
+                        <span>{b.packageLabel || b.packageType}</span>
+                        <span>{b.date} at {b.time}</span>
+                        <span className="dash-badge">{b.status}</span>
+                      </div>
+                    </div>
+                  ))}
               </div>
             )}
           </>
@@ -1218,7 +1300,17 @@ export default function DetailerDashboard({
             {prices.loading && <p className="dash-meta">Loading...</p>}
             {prices.error && <p className="dash-error">{prices.error}</p>}
             {!prices.loading && !prices.error && prices.items.length === 0 && (
-              <p className="dash-meta">No price items found.</p>
+              <div className="dash-meta">
+                <p>No price packages yet.</p>
+                <button
+                  type="button"
+                  className="dash-add-btn"
+                  onClick={seedDefaultPrices}
+                  disabled={seedPriceBusy}
+                >
+                  {seedPriceBusy ? 'Adding...' : 'Seed Default Packages'}
+                </button>
+              </div>
             )}
             {!prices.loading && !prices.error && (
               <div className="dash-list">

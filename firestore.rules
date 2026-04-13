@@ -12,7 +12,7 @@ service cloud.firestore {
 
               match /bookings/{id} {
                       // Signed-in users can create bookings linked to their own account
-                            // with verified profile details.
+                            // with verified profile details and package info.
                                   allow create: if
                                           request.auth != null &&
                                                   request.resource.data.bookedByUid == request.auth.uid &&
@@ -24,11 +24,19 @@ service cloud.firestore {
                                                                                                   request.resource.data.phone.size() > 0 &&
                                                                                                           request.resource.data.address is string &&
                                                                                                                   request.resource.data.address.size() > 0 &&
-                                                                                                                          request.resource.data.date is string &&
-                                                                                                                                  request.resource.data.date.size() > 0 &&
-                                                                                                                                          request.resource.data.time is string &&
-                                                                                                                                                  request.resource.data.time.size() > 0 &&
-                                                                                                                                                          request.resource.data.status == "pending";
+                                                                                                                          request.resource.data.packageType is string &&
+                                                                                                                                  request.resource.data.packageType in ['exterior', 'interior', 'full'] &&
+                                                                                                                                          request.resource.data.packageLabel is string &&
+                                                                                                                                                  request.resource.data.packageLabel.size() > 0 &&
+                                                                                                                                                          request.resource.data.basePrice is number &&
+                                                                                                                                                                  request.resource.data.basePrice >= 0 &&
+                                                                                                                                                                          request.resource.data.carPhotoUrl is string &&
+                                                                                                                                                                                  request.resource.data.carPhotoUrl.size() > 0 &&
+                                                                                                                                                                                          request.resource.data.date is string &&
+                                                                                                                                                                                                  request.resource.data.date.size() > 0 &&
+                                                                                                                                                                                                          request.resource.data.time is string &&
+                                                                                                                                                                                                                  request.resource.data.time.size() > 0 &&
+                                                                                                                                                                                                                          request.resource.data.status == "pending";
 
                                                                                                                                                                 // Staff can read all bookings; users can read their own bookings.
                                                                                                                                                                       allow read: if
@@ -117,21 +125,5 @@ service cloud.firestore {
                                           match /{document=**} {
                                                   allow read, write: if false;
                                           }
-    }
-}
-
-                                          }
-                                                                                        )
-                                                                                        )
-                                                        )
-                                                        )
-                                  }
-                              }
-                          }
-                      }
-                  }
-              }
-                          )
-          }
     }
 }
