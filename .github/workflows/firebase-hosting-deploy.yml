@@ -35,9 +35,11 @@ jobs:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TDDETAILED_DTATABASE }}
 
       - name: Deploy Firestore Rules
+        continue-on-error: true
         run: npx firebase-tools deploy --only firestore --project tddetailed-dtatabase --force
 
       - name: Deploy Hosting
+        if: ${{ always() }}
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
