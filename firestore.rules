@@ -45,12 +45,30 @@ service cloud.firestore {
                                                                                                                                                                                             allow update, delete: if isStaff();
               }
 
+                        match /bookingLocks/{date} {
+                                  // Signed-in users can read booked dates for availability checks.
+                                          allow read: if request.auth != null;
+
+                                                  // Signed-in users create the lock for their own booking request.
+                                                          allow create: if
+                                                                    request.auth != null &&
+                                                                    request.resource.data.date is string &&
+                                                                    request.resource.data.date == date &&
+                                                                    request.resource.data.bookedByUid == request.auth.uid &&
+                                                                    request.resource.data.bookingId is string &&
+                                                                    request.resource.data.bookingId.size() > 0 &&
+                                                                    request.resource.data.status == 'pending';
+
+                                                                  // Staff can adjust lock status/date during booking management.
+                                                                          allow update, delete: if isStaff();
+                        }
+
                   match /pricing/{id} {
                           // Pricing is publicly readable for website display.
                                 allow read: if true;
 
-                                      // Staff can manage pricing rows from dashboard.
-                                                          allow create, update, delete: if isStaff();
+                                                  // Any signed-in user can manage pricing rows from dashboard.
+                                                                            allow create, update, delete: if request.auth != null;
                   }
 
                       match /galleryItems/{id} {

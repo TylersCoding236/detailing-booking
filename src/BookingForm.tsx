@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, runTransaction, where, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { FirebaseError } from 'firebase/app';
 import { db, storage } from './firebase';
@@ -119,10 +119,7 @@ export default function BookingForm({ user }: { user: User }) {
     const loadBookedDates = async () => {
       setLoadingBookedDates(true);
       try {
-        const q = query(
-          collection(db, 'bookings'),
-          where('status', 'in', ['pending', 'approved'])
-        );
+        const q = query(collection(db, 'bookingLocks'));
         const snapshot = await getDocs(q);
         const dates = new Set<string>();
         snapshot.docs.forEach((doc) => {
@@ -243,22 +240,46 @@ export default function BookingForm({ user }: { user: User }) {
       await uploadBytes(storageRef, photoFile);
       const carPhotoUrl = await getDownloadURL(storageRef);
 
-      await addDoc(collection(db, 'bookings'), {
-        customerName: profile.fullName,
-        phone: profile.phone,
-        address: profile.address,
-        packageType,
-        packageLabel: selectedPkg.label,
-        basePrice: selectedPkg.price,
-        date,
-        time,
-        notes,
-        carPhotoUrl,
-        bookedByUid: user.uid,
-        bookedByEmail: user.email ?? '',
-        bookedByName: profile.fullName,
-        status: 'pending',
-        createdAt: serverTimestamp(),
+      const bookingRef = doc(collection(db, 'bookings'));
+      const lockRef = doc(db, 'bookingLocks', date);
+
+      await runTransaction(db, async (tx) => {
+        const lockSnap = await tx.get(lockRef);
+        if (lockSnap.exists()) {
+          throw new Error('date-booked');
+        }
+
+        tx.set(bookingRef, {
+          customerName: profile.fullName,
+          phone: profile.phone,
+          address: profile.address,
+          packageType,
+          packageLabel: selectedPkg.label,
+          basePrice: selectedPkg.price,
+          date,
+          time,
+          notes,
+          carPhotoUrl,
+          bookedByUid: user.uid,
+          bookedByEmail: user.email ?? '',
+          bookedByName: profile.fullName,
+          status: 'pending',
+          createdAt: serverTimestamp(),
+        });
+
+        tx.set(lockRef, {
+          date,
+          bookingId: bookingRef.id,
+          bookedByUid: user.uid,
+          status: 'pending',
+          createdAt: serverTimestamp(),
+        });
+      });
+
+      setBookedDates((prev) => {
+        const next = new Set(prev);
+        next.add(date);
+        return next;
       });
       setStatus('saved');
       setForm(EMPTY);
@@ -279,6 +300,8 @@ export default function BookingForm({ user }: { user: User }) {
         } else {
           setErrorMsg(`Booking failed: ${err.code}`);
         }
+      } else if (err instanceof Error && err.message === 'date-booked') {
+        setErrorMsg('That date was just booked by someone else. Please choose another date.');
       } else {
         setErrorMsg('Booking failed. Please try again.');
       }

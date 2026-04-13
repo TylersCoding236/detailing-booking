@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  runTransaction,
   serverTimestamp,
   type DocumentData,
   updateDoc,
@@ -422,29 +423,71 @@ export default function DetailerDashboard({
     const nextDate = editForm.date.trim();
     const nextTime = editForm.time.trim();
     const nextStatus = editForm.status.trim().toLowerCase();
+    const bookingRow = (bookings.items as Booking[]).find((b) => b.id === bookingId);
 
     if (!nextDate || !nextTime || !nextStatus) {
       setActionError('Date, time, and status are required.');
       return;
     }
 
+    if (!bookingRow) {
+      setActionError('Booking not found. Please refresh and try again.');
+      return;
+    }
+
     setActionBusyId(bookingId);
     try {
-      await updateDoc(doc(db, 'bookings', bookingId), {
-        date: nextDate,
-        time: nextTime,
-        status: nextStatus,
-        notes: editForm.notes.trim(),
-        updatedAt: serverTimestamp(),
+      await runTransaction(db, async (tx) => {
+        const bookingRef = doc(db, 'bookings', bookingId);
+        const oldLockRef = doc(db, 'bookingLocks', bookingRow.date);
+        const newLockRef = doc(db, 'bookingLocks', nextDate);
+
+        tx.update(bookingRef, {
+          date: nextDate,
+          time: nextTime,
+          status: nextStatus,
+          notes: editForm.notes.trim(),
+          updatedAt: serverTimestamp(),
+        });
+
+        if (bookingRow.date !== nextDate) {
+          const newLockSnap = await tx.get(newLockRef);
+          if (newLockSnap.exists()) {
+            const lockData = newLockSnap.data();
+            if (String(lockData.bookingId ?? '') !== bookingId) {
+              throw new Error('date-booked');
+            }
+          }
+
+          const oldLockSnap = await tx.get(oldLockRef);
+          if (oldLockSnap.exists()) {
+            const oldData = oldLockSnap.data();
+            if (String(oldData.bookingId ?? '') === bookingId) {
+              tx.delete(oldLockRef);
+            }
+          }
+        }
+
+        tx.set(newLockRef, {
+          date: nextDate,
+          bookingId,
+          bookedByUid: bookingRow.bookedByUid,
+          status: nextStatus,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
       });
       setActionSuccess('Booking updated.');
       cancelEditBooking();
     } catch (err) {
+      if (err instanceof Error && err.message === 'date-booked') {
+        setActionError('That date is already booked. Choose a different date.');
+      } else {
       setActionError(
         err instanceof FirebaseError
           ? `Edit failed: ${err.code}`
           : 'Edit failed.'
       );
+      }
     } finally {
       setActionBusyId('');
     }
@@ -453,8 +496,29 @@ export default function DetailerDashboard({
   async function deleteBooking(bookingId: string) {
     resetActionMessages();
     setActionBusyId(bookingId);
+    const bookingRow = (bookings.items as Booking[]).find((b) => b.id === bookingId);
+
+    if (!bookingRow) {
+      setActionError('Booking not found. Please refresh and try again.');
+      setActionBusyId('');
+      return;
+    }
+
     try {
-      await deleteDoc(doc(db, 'bookings', bookingId));
+      await runTransaction(db, async (tx) => {
+        const bookingRef = doc(db, 'bookings', bookingId);
+        const lockRef = doc(db, 'bookingLocks', bookingRow.date);
+        const lockSnap = await tx.get(lockRef);
+
+        tx.delete(bookingRef);
+
+        if (lockSnap.exists()) {
+          const lockData = lockSnap.data();
+          if (String(lockData.bookingId ?? '') === bookingId) {
+            tx.delete(lockRef);
+          }
+        }
+      });
       if (editingId === bookingId) cancelEditBooking();
       setActionSuccess('Booking removed.');
     } catch (err) {
