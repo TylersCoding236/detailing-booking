@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build_and_deploy:
@@ -28,13 +29,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TDDETAILED_DTATABASE }}
+
       - name: Deploy Firestore and Storage Rules
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TDDETAILED_DTATABASE }}
-        run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > /tmp/firebase-key.json
-          GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-key.json npx firebase-tools deploy --only firestore,storage --project tddetailed-dtatabase --force
-          rm /tmp/firebase-key.json
+        run: npx firebase-tools deploy --only firestore,storage --project tddetailed-dtatabase --force
 
       - name: Deploy Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0

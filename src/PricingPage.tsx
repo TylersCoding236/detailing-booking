@@ -185,6 +185,7 @@ export default function PricingPage() {
   const [items, setItems] = useState<PriceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [fromDB, setFromDB] = useState(false);
   const [activePackage, setActivePackage] = useState<'exterior' | 'interior' | 'full' | null>(null);
 
   useEffect(() => {
@@ -199,6 +200,7 @@ export default function PricingPage() {
           .sort((a, b) => a.displayOrder - b.displayOrder);
 
         setItems(next);
+        setFromDB(next.length > 0);
         setLoading(false);
         setError('');
       },
@@ -329,7 +331,12 @@ export default function PricingPage() {
         </div>
 
         {loading && <p>Loading pricing...</p>}
-        {error && <p style={{ color: '#bb1e14' }}>{error}</p>}
+        {!loading && error && <p style={{ color: '#bb1e14' }}>{error}</p>}
+        {!loading && !error && !fromDB && (
+          <p style={{ fontSize: '0.8rem', color: '#999', marginBottom: '8px' }}>
+            Showing default prices — connect Firestore to manage live pricing.
+          </p>
+        )}
 
         {!loading && !error && (
           <div className="pricing-grid">
