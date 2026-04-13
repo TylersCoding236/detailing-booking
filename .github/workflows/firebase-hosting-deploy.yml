@@ -34,8 +34,8 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TDDETAILED_DTATABASE }}
 
-      - name: Deploy Firestore and Storage Rules
-        run: npx firebase-tools deploy --only firestore,storage --project tddetailed-dtatabase --force
+      - name: Deploy Firestore Rules
+        run: npx firebase-tools deploy --only firestore --project tddetailed-dtatabase --force
 
       - name: Deploy Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
