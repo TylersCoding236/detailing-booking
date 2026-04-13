@@ -2570,6 +2570,33 @@ p {
   font-size: 0.9rem;
 }
 
+.dash-rules-warning {
+  background: #fff8e1;
+  border: 1.5px solid #f59e0b;
+  border-radius: 8px;
+  padding: 16px 20px;
+  color: #7c4f00;
+}
+.dash-rules-warning strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+.dash-rules-warning ol {
+  margin: 8px 0 8px 18px;
+  line-height: 1.8;
+}
+.dash-rules-warning a {
+  color: #b45309;
+  font-weight: 600;
+}
+.dash-rules-warning code {
+  background: #fef3c7;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.85em;
+}
+
 .dash-edit-form {
   width: 100%;
   margin-top: 6px;

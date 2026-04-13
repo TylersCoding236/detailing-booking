@@ -1298,7 +1298,19 @@ export default function DetailerDashboard({
             )}
 
             {prices.loading && <p className="dash-meta">Loading...</p>}
-            {prices.error && <p className="dash-error">{prices.error}</p>}
+            {prices.error && (
+              <div className="dash-rules-warning">
+                <strong>⚠ Firestore rules not deployed yet.</strong>
+                <p>Your security rules file exists but has not been published to Firebase. You need to copy your rules into the Firebase Console.</p>
+                <ol>
+                  <li>Open <a href="https://console.firebase.google.com/project/tddetailed-dtatabase/firestore/rules" target="_blank" rel="noreferrer">Firebase Console → Firestore → Rules</a></li>
+                  <li>Replace all text with the contents of your <code>firestore.rules</code> file</li>
+                  <li>Click <strong>Publish</strong></li>
+                  <li>Then go to <a href="https://console.firebase.google.com/project/tddetailed-dtatabase/storage/tddetailed-dtatabase.firebasestorage.app/rules" target="_blank" rel="noreferrer">Storage → Rules</a> and do the same with <code>storage.rules</code></li>
+                </ol>
+                <p style={{fontSize:'0.8rem',opacity:0.7}}>Error: {prices.error}</p>
+              </div>
+            )}
             {!prices.loading && !prices.error && prices.items.length === 0 && (
               <div className="dash-meta">
                 <p>No price packages yet.</p>

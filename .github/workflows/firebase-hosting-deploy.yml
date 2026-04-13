@@ -30,10 +30,11 @@ jobs:
 
       - name: Deploy Firestore and Storage Rules
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-key.json
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TDDETAILED_DTATABASE }}
         run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_TDDETAILED_DTATABASE }}' > /tmp/firebase-key.json
-          npx firebase-tools deploy --only firestore,storage --project tddetailed-dtatabase
+          echo "$FIREBASE_SERVICE_ACCOUNT" > /tmp/firebase-key.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-key.json npx firebase-tools deploy --only firestore,storage --project tddetailed-dtatabase --force
+          rm /tmp/firebase-key.json
 
       - name: Deploy Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
