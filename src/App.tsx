@@ -22,8 +22,11 @@ type Page =
   | 'signup'
   | 'login'
   | 'dashboard'
+  | 'admin'
   | 'settings'
   | 'verify-account';
+
+const ROOT_ADMIN_KEY = 'td_root_admin';
 
 function normalizeRoutePart(value: string): string {
   return value.trim().toLowerCase().replace(/^\/+/, '').replace(/\/+$/, '');
@@ -41,6 +44,7 @@ function getPageFromLocation(): Page {
   if (route === 'signup') return 'signup';
   if (route === 'login') return 'login';
   if (route === 'dashboard') return 'dashboard';
+  if (route === 'admin') return 'admin';
   if (route === 'settings') return 'settings';
   if (route === 'verify-account') return 'verify-account';
 
@@ -246,6 +250,49 @@ function SignedInDashboard({
   );
 }
 
+function RootAdminPage({
+  onOpenStandardSite,
+  onExitRootMode,
+}: {
+  onOpenStandardSite: () => void;
+  onExitRootMode: () => void;
+}) {
+  return (
+    <section className="panel fade-in root-admin-page">
+      <h2>Root Admin</h2>
+      <p>Admin tools for site management.</p>
+
+      <div className="root-tools-grid">
+        <article className="root-tool-card">
+          <h3>Site Preview</h3>
+          <p>Open the standard site experience exactly as customers see it.</p>
+          <button type="button" className="primary-btn" onClick={onOpenStandardSite}>
+            Open Standard Site
+          </button>
+        </article>
+
+        <article className="root-tool-card">
+          <h3>Site Utilities</h3>
+          <p>Open utility pages and configuration views.</p>
+          <div className="root-tool-links">
+            <a href="#/debug">Debug Page</a>
+            <a href="#/pricing">Pricing Page</a>
+            <a href="#/learn-more">Learn More Page</a>
+          </div>
+        </article>
+
+        <article className="root-tool-card">
+          <h3>Session</h3>
+          <p>Exit root mode and return to normal login.</p>
+          <button type="button" className="ghost-btn" onClick={onExitRootMode}>
+            Exit Root Mode
+          </button>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [page, setPage] = useState<Page>(getPageFromLocation());
@@ -255,9 +302,13 @@ export default function App() {
   const [userProfileVerified, setUserProfileVerified] = useState(false);
   const [standardSiteAccess, setStandardSiteAccess] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [rootAdmin, setRootAdmin] = useState(
+    () => localStorage.getItem(ROOT_ADMIN_KEY) === '1'
+  );
 
-  const isStaffUser = userRole === 'Detailer' || userRole === 'Owner';
+  const isStaffUser = rootAdmin || userRole === 'Detailer' || userRole === 'Owner';
   const staffAdminMode = isStaffUser && !standardSiteAccess;
+  const hasSession = Boolean(user) || rootAdmin;
 
   useEffect(() => {
     const syncPage = () => {
@@ -272,6 +323,21 @@ export default function App() {
     return () => {
       window.removeEventListener('hashchange', syncPage);
       window.removeEventListener('popstate', syncPage);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncRootSession = () => {
+      setRootAdmin(localStorage.getItem(ROOT_ADMIN_KEY) === '1');
+    };
+
+    window.addEventListener('storage', syncRootSession);
+    window.addEventListener('root-admin-changed', syncRootSession as EventListener);
+    syncRootSession();
+
+    return () => {
+      window.removeEventListener('storage', syncRootSession);
+      window.removeEventListener('root-admin-changed', syncRootSession as EventListener);
     };
   }, []);
 
@@ -306,13 +372,19 @@ export default function App() {
   useEffect(() => {
     if (!authReady) return;
 
+    if (rootAdmin && page === 'home' && !standardSiteAccess) {
+      setPage('dashboard');
+      window.location.hash = '#/dashboard';
+      return;
+    }
+
     if (user && page === 'home' && !standardSiteAccess) {
       setPage('dashboard');
       window.location.hash = '#/dashboard';
       return;
     }
 
-    if (!user && page === 'dashboard') {
+    if (!hasSession && page === 'dashboard') {
       setPage('home');
       window.location.hash = '#/';
       return;
@@ -327,11 +399,22 @@ export default function App() {
     if (!user && page === 'verify-account') {
       setPage('login');
       window.location.hash = '#/login';
+      return;
     }
-  }, [authReady, page, standardSiteAccess, user]);
+
+    if (!rootAdmin && page === 'admin') {
+      setPage('login');
+      window.location.hash = '#/login';
+    }
+  }, [authReady, hasSession, page, rootAdmin, standardSiteAccess, user]);
 
   async function handleLogout() {
-    await signOut(auth);
+    if (user) {
+      await signOut(auth);
+    }
+    localStorage.removeItem(ROOT_ADMIN_KEY);
+    setRootAdmin(false);
+    window.dispatchEvent(new Event('root-admin-changed'));
     setMenuOpen(false);
     window.location.hash = '#/';
   }
@@ -341,6 +424,20 @@ export default function App() {
     setMenuOpen(false);
     setPage('dashboard');
     window.location.hash = '#/dashboard';
+  }
+
+  function handleOpenStandardSiteFromRoot() {
+    setStandardSiteAccess(true);
+    setMenuOpen(false);
+    window.location.hash = '#/';
+  }
+
+  function handleExitRootMode() {
+    localStorage.removeItem(ROOT_ADMIN_KEY);
+    setRootAdmin(false);
+    window.dispatchEvent(new Event('root-admin-changed'));
+    setMenuOpen(false);
+    window.location.hash = '#/login';
   }
 
   return (
@@ -361,7 +458,11 @@ export default function App() {
           </button>
           {menuOpen && (
             <nav id="main-menu" className="menu-dropdown">
-              {user ? (
+              {rootAdmin ? (
+                <a href="#/dashboard" onClick={() => setMenuOpen(false)}>
+                  Dashboard
+                </a>
+              ) : user ? (
                 <a href="#/dashboard" onClick={() => setMenuOpen(false)}>
                   Dashboard
                 </a>
@@ -398,7 +499,7 @@ export default function App() {
               <a href="#/debug" onClick={() => setMenuOpen(false)}>
                 Debug
               </a>
-              {user ? (
+              {hasSession ? (
                 <button className="menu-logout-btn" type="button" onClick={handleLogout}>
                   Log Out
                 </button>
@@ -465,7 +566,14 @@ export default function App() {
               <AuthPage mode="login" />
             ))}
           {page === 'dashboard' &&
-            (userRole === 'Detailer' || userRole === 'Owner' ? (
+            (rootAdmin ? (
+              <DetailerDashboard
+                standardSiteAccess={standardSiteAccess}
+                onToggleStandardSiteAccess={() => {
+                  setStandardSiteAccess((prev) => !prev);
+                }}
+              />
+            ) : userRole === 'Detailer' || userRole === 'Owner' ? (
               <DetailerDashboard
                 standardSiteAccess={standardSiteAccess}
                 onToggleStandardSiteAccess={() => {
@@ -480,6 +588,15 @@ export default function App() {
                 profileVerified={userProfileVerified}
               />
             ) : null)}
+          {page === 'admin' &&
+            (rootAdmin ? (
+              <RootAdminPage
+                onOpenStandardSite={handleOpenStandardSiteFromRoot}
+                onExitRootMode={handleExitRootMode}
+              />
+            ) : (
+              <AuthPage mode="login" />
+            ))}
         </main>
       )}
 

@@ -16,6 +16,11 @@ interface AuthPageProps {
   mode: 'login' | 'signup';
 }
 
+const ROOT_ADMIN_KEY = 'td_root_admin';
+const ROOT_ADMIN_USERNAME = 'root';
+const ROOT_ADMIN_PASSWORD = '264139';
+const ROOT_ADMIN_EMAIL = 'root@tddetailed.admin';
+
 function formatAuthError(err: unknown): string {
   if (!(err instanceof FirebaseError)) {
     return 'Something went wrong. Please try again.';
@@ -115,15 +120,62 @@ export default function AuthPage({ mode }: AuthPageProps) {
     setError('');
     setSuccess('');
 
-    const trimmedEmail = email.trim().toLowerCase();
-    if (!trimmedEmail || !password) {
+    const loginId = email.trim().toLowerCase();
+    if (!loginId || !password) {
       setError('Email and password are required.');
+      return;
+    }
+
+    if (loginId === ROOT_ADMIN_USERNAME) {
+      if (password !== ROOT_ADMIN_PASSWORD) {
+        setError('Invalid root credentials.');
+        return;
+      }
+
+      setBusy(true);
+      try {
+        let credential;
+        try {
+          credential = await signInWithEmailAndPassword(auth, ROOT_ADMIN_EMAIL, ROOT_ADMIN_PASSWORD);
+        } catch (err) {
+          if (err instanceof FirebaseError && err.code === 'auth/invalid-credential') {
+            credential = await createUserWithEmailAndPassword(
+              auth,
+              ROOT_ADMIN_EMAIL,
+              ROOT_ADMIN_PASSWORD
+            );
+          } else {
+            throw err;
+          }
+        }
+
+        await setDoc(
+          doc(db, 'users', credential.user.uid),
+          {
+            uid: credential.user.uid,
+            name: 'Root',
+            email: ROOT_ADMIN_EMAIL,
+            role: 'Owner',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        localStorage.setItem(ROOT_ADMIN_KEY, '1');
+        window.dispatchEvent(new Event('root-admin-changed'));
+        window.location.hash = '#/dashboard';
+      } catch (err) {
+        setError(formatAuthError(err));
+      } finally {
+        setBusy(false);
+      }
       return;
     }
 
     setBusy(true);
     try {
-      const credential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+      const credential = await signInWithEmailAndPassword(auth, loginId, password);
       const role = await readUserRole(credential.user.uid);
       window.location.hash = (role === 'Detailer' || role === 'Owner') ? '#/dashboard' : '#/';
     } catch (err) {
@@ -137,7 +189,11 @@ export default function AuthPage({ mode }: AuthPageProps) {
     setError('');
     setSuccess('');
     try {
-      await signOut(auth);
+      localStorage.removeItem(ROOT_ADMIN_KEY);
+      window.dispatchEvent(new Event('root-admin-changed'));
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
       setSuccess('Logged out.');
     } catch (err) {
       setError(formatAuthError(err));
@@ -195,12 +251,12 @@ export default function AuthPage({ mode }: AuthPageProps) {
       ) : (
         <form className="auth-form" onSubmit={handleLogin}>
           <label>
-            Email
+            Email or Username
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
+              autoComplete="username"
             />
           </label>
           <label>
