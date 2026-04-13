@@ -2423,6 +2423,22 @@ p {
   color: #111;
 }
 
+.dash-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dash-add-btn--secondary {
+  background: #fff;
+  color: #111;
+}
+
+.dash-add-btn--secondary:hover {
+  background: #111;
+  color: #fff;
+}
+
 .dash-list {
   display: grid;
   gap: 8px;

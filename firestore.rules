@@ -50,9 +50,7 @@ service cloud.firestore {
                                 allow read: if true;
 
                                       // Staff can manage pricing rows from dashboard.
-                                            allow create: if isStaff();
-                                                  allow update: if isStaff();
-                                                        allow delete: if false;
+                                                          allow create, update, delete: if isStaff();
                   }
 
                       match /galleryItems/{id} {

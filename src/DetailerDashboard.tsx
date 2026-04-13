@@ -273,7 +273,7 @@ export default function DetailerDashboard({
 
   const [showCreatePrice, setShowCreatePrice] = useState(false);
   const [createPriceBusy, setCreatePriceBusy] = useState(false);
-  const [seedPriceBusy, setSeedPriceBusy] = useState(false);
+  const [syncPriceBusy, setSyncPriceBusy] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState('');
   const [priceEditBusy, setPriceEditBusy] = useState(false);
   const [priceCreateForm, setPriceCreateForm] = useState<PriceCreateForm>({
@@ -474,17 +474,36 @@ export default function DetailerDashboard({
     }
   }
 
-  const DEFAULT_PRICE_PACKAGES = [
-    { detailName: 'Exterior Refresh', price: 50, description: 'Hand wash, dry, wheels, and glass cleaned for a solid reset.', displayOrder: 1 },
-    { detailName: 'Interior Reset', price: 50, description: 'Vacuum, wipe-down, and main interior surfaces cleaned.', displayOrder: 2 },
-    { detailName: 'Full Detail', price: 70, description: 'Complete interior and exterior detail service.', displayOrder: 3 },
+  const HOME_PAGE_PRICE_PACKAGES = [
+    {
+      detailName: 'Exterior Refresh',
+      price: 50,
+      description: 'Hand wash, dry, wheels, and glass cleaned for a solid reset.',
+      displayOrder: 1,
+    },
+    {
+      detailName: 'Interior Reset',
+      price: 50,
+      description: 'Vacuum, wipe-down, and the main interior surfaces cleaned up properly.',
+      displayOrder: 2,
+    },
+    {
+      detailName: 'Full Detail',
+      price: 70,
+      description: 'A complete inside-and-out service for the cleanest overall finish.',
+      displayOrder: 3,
+    },
   ];
 
-  async function seedDefaultPrices() {
-    setSeedPriceBusy(true);
+  async function replacePricesWithHomePackages() {
+    setSyncPriceBusy(true);
     resetActionMessages();
     try {
-      for (const pkg of DEFAULT_PRICE_PACKAGES) {
+      for (const price of prices.items as PricingItem[]) {
+        await deleteDoc(doc(db, 'pricing', price.id));
+      }
+
+      for (const pkg of HOME_PAGE_PRICE_PACKAGES) {
         await addDoc(collection(db, 'pricing'), {
           ...pkg,
           isEnabled: true,
@@ -492,13 +511,13 @@ export default function DetailerDashboard({
           createdAt: serverTimestamp(),
         });
       }
-      setActionSuccess('Default packages added. You can now edit them.');
+      setActionSuccess('Pricing now matches the three home page packages.');
     } catch (err) {
       setActionError(
-        err instanceof FirebaseError ? `Seed failed: ${err.code}` : 'Seed failed.'
+        err instanceof FirebaseError ? `Replace prices failed: ${err.code}` : 'Replace prices failed.'
       );
     } finally {
-      setSeedPriceBusy(false);
+      setSyncPriceBusy(false);
     }
   }
 
@@ -970,21 +989,33 @@ export default function DetailerDashboard({
             </span>
 
             {isCreateTab && (
-              <button
-                className="dash-add-btn"
-                type="button"
-                onClick={() => {
-                  if (tab === 'prices') setShowCreatePrice((prev) => !prev);
-                  if (tab === 'gallery') setShowCreateGallery((prev) => !prev);
-                  if (tab === 'reviews') setShowCreateReview((prev) => !prev);
-                  if (tab === 'news') setShowCreateNews((prev) => !prev);
-                }}
-              >
-                {tab === 'prices' && (showCreatePrice ? 'Cancel' : 'Create Price')}
-                {tab === 'gallery' && (showCreateGallery ? 'Cancel' : 'Create Gallery Item')}
-                {tab === 'reviews' && (showCreateReview ? 'Cancel' : 'Create Review')}
-                {tab === 'news' && (showCreateNews ? 'Cancel' : 'Create News')}
-              </button>
+              <div className="dash-actions">
+                {tab === 'prices' && (
+                  <button
+                    className="dash-add-btn dash-add-btn--secondary"
+                    type="button"
+                    onClick={replacePricesWithHomePackages}
+                    disabled={syncPriceBusy}
+                  >
+                    {syncPriceBusy ? 'Replacing...' : 'Use Home Page 3 Packages'}
+                  </button>
+                )}
+                <button
+                  className="dash-add-btn"
+                  type="button"
+                  onClick={() => {
+                    if (tab === 'prices') setShowCreatePrice((prev) => !prev);
+                    if (tab === 'gallery') setShowCreateGallery((prev) => !prev);
+                    if (tab === 'reviews') setShowCreateReview((prev) => !prev);
+                    if (tab === 'news') setShowCreateNews((prev) => !prev);
+                  }}
+                >
+                  {tab === 'prices' && (showCreatePrice ? 'Cancel' : 'Create Price')}
+                  {tab === 'gallery' && (showCreateGallery ? 'Cancel' : 'Create Gallery Item')}
+                  {tab === 'reviews' && (showCreateReview ? 'Cancel' : 'Create Review')}
+                  {tab === 'news' && (showCreateNews ? 'Cancel' : 'Create News')}
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -1317,10 +1348,10 @@ export default function DetailerDashboard({
                 <button
                   type="button"
                   className="dash-add-btn"
-                  onClick={seedDefaultPrices}
-                  disabled={seedPriceBusy}
+                  onClick={replacePricesWithHomePackages}
+                  disabled={syncPriceBusy}
                 >
-                  {seedPriceBusy ? 'Adding...' : 'Seed Default Packages'}
+                  {syncPriceBusy ? 'Adding...' : 'Add Home Page Packages'}
                 </button>
               </div>
             )}
