@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { collection, onSnapshot, type DocumentData } from 'firebase/firestore';
 import { db } from './firebase';
+import { DETAIL_PACKAGES } from './detailPackages';
 
 function ScrollProgress() {
   const [progress, setProgress] = useState(0);
@@ -85,26 +86,12 @@ type NewsItem = {
 
 const NEWS_SEEN_KEY = 'td_news_last_seen_id';
 
-const services = [
-  {
-    icon: 'EX',
-    title: 'Exterior Refresh',
-    price: '$50',
-    desc: 'Hand wash, dry, wheels, and glass cleaned for a solid reset.',
-  },
-  {
-    icon: 'IN',
-    title: 'Interior Reset',
-    price: '$50',
-    desc: 'Vacuum, wipe-down, and the main interior surfaces cleaned up properly.',
-  },
-  {
-    icon: 'FD',
-    title: 'Full Detail',
-    price: '$70',
-    desc: 'A complete inside-and-out service for the cleanest overall finish.',
-  },
-];
+const services = DETAIL_PACKAGES.map((item) => ({
+  icon: item.icon,
+  title: item.title,
+  price: `$${item.price}`,
+  desc: item.description,
+}));
 
 const bookingSteps = [
   {

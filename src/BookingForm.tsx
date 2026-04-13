@@ -4,6 +4,7 @@ import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { FirebaseError } from 'firebase/app';
 import { db, storage } from './firebase';
+import { DETAIL_PACKAGES, getDetailPackageKey, type DetailPackageKey } from './detailPackages';
 
 type Status = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -21,21 +22,13 @@ const EMPTY: FormState = {
   notes: '',
 };
 
-type PackageOption = { key: 'exterior' | 'interior' | 'full'; label: string; price: number };
+type PackageOption = { key: DetailPackageKey; label: string; price: number };
 
-const DEFAULT_PACKAGES: PackageOption[] = [
-  { key: 'exterior', label: 'Exterior Refresh', price: 50 },
-  { key: 'interior', label: 'Interior Reset', price: 50 },
-  { key: 'full', label: 'Full Detail', price: 70 },
-];
-
-function getPackageKey(name: string): 'exterior' | 'interior' | 'full' | null {
-  const v = name.toLowerCase();
-  if (v.includes('exterior')) return 'exterior';
-  if (v.includes('interior')) return 'interior';
-  if (v.includes('full')) return 'full';
-  return null;
-}
+const DEFAULT_PACKAGES: PackageOption[] = DETAIL_PACKAGES.map((item) => ({
+  key: item.key,
+  label: item.title,
+  price: item.price,
+}));
 
 type VerifiedProfile = {
   fullName: string;
@@ -60,10 +53,10 @@ export default function BookingForm({ user }: { user: User }) {
     const loadPrices = async () => {
       try {
         const snap = await getDocs(collection(db, 'pricing'));
-        const overrides = new Map<'exterior' | 'interior' | 'full', { label: string; price: number }>();
+        const overrides = new Map<DetailPackageKey, { label: string; price: number }>();
         snap.docs.forEach((d) => {
           const data = d.data();
-          const key = getPackageKey(String(data.detailName ?? data.name ?? ''));
+          const key = getDetailPackageKey(String(data.detailName ?? data.name ?? ''));
           if (!key) return;
           const price = typeof data.price === 'number' ? data.price : null;
           const label = String(data.detailName ?? data.name ?? '').trim();

@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 import { db } from './firebase';
+import { DETAIL_PACKAGES, getDetailPackageKey } from './detailPackages';
 
 type DashTab =
   | 'bookings'
@@ -271,18 +272,11 @@ export default function DetailerDashboard({
     notes: '',
   });
 
-  const [showCreatePrice, setShowCreatePrice] = useState(false);
   const [createPriceBusy, setCreatePriceBusy] = useState(false);
   const [syncPriceBusy, setSyncPriceBusy] = useState(false);
+  const [hasAutoSyncedPrices, setHasAutoSyncedPrices] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState('');
   const [priceEditBusy, setPriceEditBusy] = useState(false);
-  const [priceCreateForm, setPriceCreateForm] = useState<PriceCreateForm>({
-    name: '',
-    price: '',
-    description: '',
-    isEnabled: true,
-    isSpecialOffer: false,
-  });
   const [priceEditForm, setPriceEditForm] = useState<PriceEditForm>({
     name: '',
     price: '',
@@ -474,26 +468,22 @@ export default function DetailerDashboard({
     }
   }
 
-  const HOME_PAGE_PRICE_PACKAGES = [
-    {
-      detailName: 'Exterior Refresh',
-      price: 50,
-      description: 'Hand wash, dry, wheels, and glass cleaned for a solid reset.',
-      displayOrder: 1,
-    },
-    {
-      detailName: 'Interior Reset',
-      price: 50,
-      description: 'Vacuum, wipe-down, and the main interior surfaces cleaned up properly.',
-      displayOrder: 2,
-    },
-    {
-      detailName: 'Full Detail',
-      price: 70,
-      description: 'A complete inside-and-out service for the cleanest overall finish.',
-      displayOrder: 3,
-    },
-  ];
+  const HOME_PAGE_PRICE_PACKAGES = DETAIL_PACKAGES.map((item) => ({
+    detailName: item.title,
+    price: item.price,
+    description: item.description,
+    displayOrder: item.displayOrder,
+  }));
+
+  const canonicalPriceKeys = new Set(DETAIL_PACKAGES.map((item) => item.key));
+  const currentPriceKeys = new Set(
+    (prices.items as PricingItem[])
+      .map((item) => getDetailPackageKey(item.name))
+      .filter((value): value is NonNullable<ReturnType<typeof getDetailPackageKey>> => value !== null)
+  );
+  const priceSetMatchesHomePackages =
+    prices.items.length === DETAIL_PACKAGES.length &&
+    DETAIL_PACKAGES.every((item) => currentPriceKeys.has(item.key));
 
   async function replacePricesWithHomePackages() {
     setSyncPriceBusy(true);
@@ -521,54 +511,26 @@ export default function DetailerDashboard({
     }
   }
 
-  async function createPriceItem() {
-    resetActionMessages();
-
-    const name = priceCreateForm.name.trim();
-    const priceRaw = priceCreateForm.price.trim();
-    const description = priceCreateForm.description.trim();
-
-    if (!name || !priceRaw) {
-      setActionError('Price package name and price are required.');
+  useEffect(() => {
+    if (tab !== 'prices' || prices.loading || prices.error || syncPriceBusy || hasAutoSyncedPrices) {
       return;
     }
 
-    const parsedPrice = Number(priceRaw);
-    if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
-      setActionError('Price must be a valid positive number.');
+    if (!priceSetMatchesHomePackages) {
+      setHasAutoSyncedPrices(true);
+      void replacePricesWithHomePackages();
       return;
     }
 
-    setCreatePriceBusy(true);
-    try {
-      await addDoc(collection(db, 'pricing'), {
-        detailName: name,
-        price: parsedPrice,
-        description,
-        isEnabled: priceCreateForm.isEnabled,
-        isSpecialOffer: priceCreateForm.isSpecialOffer,
-        createdAt: serverTimestamp(),
-      });
-
-      setPriceCreateForm({
-        name: '',
-        price: '',
-        description: '',
-        isEnabled: true,
-        isSpecialOffer: false,
-      });
-      setShowCreatePrice(false);
-      setActionSuccess('Price package created.');
-    } catch (err) {
-      setActionError(
-        err instanceof FirebaseError
-          ? `Create price failed: ${err.code}`
-          : 'Create price failed.'
-      );
-    } finally {
-      setCreatePriceBusy(false);
-    }
-  }
+    setHasAutoSyncedPrices(true);
+  }, [
+    tab,
+    prices.loading,
+    prices.error,
+    syncPriceBusy,
+    hasAutoSyncedPrices,
+    priceSetMatchesHomePackages,
+  ]);
 
   function beginEditPrice(price: PricingItem) {
     resetActionMessages();
@@ -948,7 +910,7 @@ export default function DetailerDashboard({
     }
   }
 
-  const isCreateTab = tab === 'prices' || tab === 'gallery' || tab === 'reviews' || tab === 'news';
+  const isCreateTab = tab === 'gallery' || tab === 'reviews' || tab === 'news';
 
   return (
     <section className="panel fade-in dash-page">
@@ -988,7 +950,7 @@ export default function DetailerDashboard({
               {!tabData.loading && tabData.items.length !== 1 ? 's' : ''}
             </span>
 
-            {isCreateTab && (
+            {(isCreateTab || tab === 'prices') && (
               <div className="dash-actions">
                 {tab === 'prices' && (
                   <button
@@ -1000,21 +962,21 @@ export default function DetailerDashboard({
                     {syncPriceBusy ? 'Replacing...' : 'Use Home Page 3 Packages'}
                   </button>
                 )}
-                <button
-                  className="dash-add-btn"
-                  type="button"
-                  onClick={() => {
-                    if (tab === 'prices') setShowCreatePrice((prev) => !prev);
-                    if (tab === 'gallery') setShowCreateGallery((prev) => !prev);
-                    if (tab === 'reviews') setShowCreateReview((prev) => !prev);
-                    if (tab === 'news') setShowCreateNews((prev) => !prev);
-                  }}
-                >
-                  {tab === 'prices' && (showCreatePrice ? 'Cancel' : 'Create Price')}
-                  {tab === 'gallery' && (showCreateGallery ? 'Cancel' : 'Create Gallery Item')}
-                  {tab === 'reviews' && (showCreateReview ? 'Cancel' : 'Create Review')}
-                  {tab === 'news' && (showCreateNews ? 'Cancel' : 'Create News')}
-                </button>
+                {isCreateTab && (
+                  <button
+                    className="dash-add-btn"
+                    type="button"
+                    onClick={() => {
+                      if (tab === 'gallery') setShowCreateGallery((prev) => !prev);
+                      if (tab === 'reviews') setShowCreateReview((prev) => !prev);
+                      if (tab === 'news') setShowCreateNews((prev) => !prev);
+                    }}
+                  >
+                    {tab === 'gallery' && (showCreateGallery ? 'Cancel' : 'Create Gallery Item')}
+                    {tab === 'reviews' && (showCreateReview ? 'Cancel' : 'Create Review')}
+                    {tab === 'news' && (showCreateNews ? 'Cancel' : 'Create News')}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1246,87 +1208,9 @@ export default function DetailerDashboard({
 
         {tab === 'prices' && (
           <>
-            {showCreatePrice && (
-              <div className="dash-create-form">
-                <label>
-                  Package Name
-                  <input
-                    value={priceCreateForm.name}
-                    onChange={(e) =>
-                      setPriceCreateForm((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                    placeholder="Basic Wash"
-                  />
-                </label>
-                <label>
-                  Price
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={priceCreateForm.price}
-                    onChange={(e) =>
-                      setPriceCreateForm((prev) => ({
-                        ...prev,
-                        price: e.target.value,
-                      }))
-                    }
-                    placeholder="25"
-                  />
-                </label>
-                <label>
-                  Description
-                  <textarea
-                    value={priceCreateForm.description}
-                    onChange={(e) =>
-                      setPriceCreateForm((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                    placeholder="Exterior wash and window clean"
-                  />
-                </label>
-                <label className="dash-check-label">
-                  <input
-                    type="checkbox"
-                    checked={priceCreateForm.isEnabled}
-                    onChange={(e) =>
-                      setPriceCreateForm((prev) => ({
-                        ...prev,
-                        isEnabled: e.target.checked,
-                      }))
-                    }
-                  />
-                  Enabled
-                </label>
-                <label className="dash-check-label">
-                  <input
-                    type="checkbox"
-                    checked={priceCreateForm.isSpecialOffer}
-                    onChange={(e) =>
-                      setPriceCreateForm((prev) => ({
-                        ...prev,
-                        isSpecialOffer: e.target.checked,
-                      }))
-                    }
-                  />
-                  Special Offer
-                </label>
-                <div className="dash-create-actions">
-                  <button
-                    type="button"
-                    onClick={createPriceItem}
-                    disabled={createPriceBusy}
-                  >
-                    {createPriceBusy ? 'Creating...' : 'Save Price Package'}
-                  </button>
-                </div>
-              </div>
-            )}
+            <p className="dash-meta">
+              This editor now manages only the three home page packages. Use the sync button to replace any old price rows with those three database items.
+            </p>
 
             {prices.loading && <p className="dash-meta">Loading...</p>}
             {prices.error && (
