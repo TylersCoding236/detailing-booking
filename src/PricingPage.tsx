@@ -234,12 +234,13 @@ export default function PricingPage() {
       const existing = byKey.get(service.key);
       return {
         id: existing?.id ?? `default-${service.key}`,
-        detailName: service.label,
-        price: service.price,
+        detailName: (existing?.detailName?.trim()) || service.label,
+        price: existing?.price || service.price,
         description: existing?.description?.trim() || service.description,
         isSpecialOffer: Boolean(existing?.isSpecialOffer),
         isEnabled: true,
         displayOrder: service.order,
+        key: service.key,
       };
     });
   }, [items]);
@@ -286,7 +287,7 @@ export default function PricingPage() {
                 </button>
               </div>
 
-              <p className="price-modal-value">{PACKAGE_DETAILS[activePackage].price}</p>
+              <p className="price-modal-value">{displayItems.find(i => i.key === activePackage)?.price ?? PACKAGE_DETAILS[activePackage].price}</p>
               <p className="price-modal-summary">{PACKAGE_DETAILS[activePackage].summary}</p>
 
               <div className="price-modal-block">
