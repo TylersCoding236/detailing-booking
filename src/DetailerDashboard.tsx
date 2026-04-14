@@ -475,7 +475,7 @@ export default function DetailerDashboard({
             : [];
           const adjustedCount = bookingRow.date === nextDate && oldBlocksDay ? Math.max(0, currentCount - 1) : currentCount;
           const adjustedTimes = bookingRow.date === nextDate && oldBlocksDay
-            ? currentTimes.filter((item) => item !== bookingRow.time)
+            ? currentTimes.filter((item: string) => item !== bookingRow.time)
             : currentTimes;
 
           if (adjustedCount >= getDailyCapacity(nextDate) || adjustedTimes.includes(nextTime)) {
@@ -485,7 +485,7 @@ export default function DetailerDashboard({
 
         if (oldBlocksDay) {
           const currentCount = Number(oldLockSnap.data()?.count ?? 0);
-          const currentTimes = Array.isArray(oldLockSnap.data()?.times)
+          const currentTimes: string[] = Array.isArray(oldLockSnap.data()?.times)
             ? oldLockSnap.data()!.times.map((item: unknown) => String(item))
             : [];
           const nextCount = Math.max(0, currentCount - 1);
@@ -515,7 +515,7 @@ export default function DetailerDashboard({
             : [];
           const baseCount = bookingRow.date === nextDate && oldBlocksDay ? Math.max(0, currentCount - 1) : currentCount;
           const baseTimes = bookingRow.date === nextDate && oldBlocksDay
-            ? currentTimes.filter((item) => item !== bookingRow.time)
+            ? currentTimes.filter((item: string) => item !== bookingRow.time)
             : currentTimes;
 
           tx.set(newLockRef, {
@@ -567,11 +567,11 @@ export default function DetailerDashboard({
 
         if (String(bookingRow.status ?? 'pending').toLowerCase() !== 'cancelled' && lockSnap.exists()) {
           const currentCount = Number(lockSnap.data()?.count ?? 0);
-          const currentTimes = Array.isArray(lockSnap.data()?.times)
+          const currentTimes: string[] = Array.isArray(lockSnap.data()?.times)
             ? lockSnap.data()!.times.map((item: unknown) => String(item))
             : [];
           const nextCount = Math.max(0, currentCount - 1);
-          const nextTimes = currentTimes.filter((item) => item !== bookingRow.time);
+          const nextTimes = currentTimes.filter((item: string) => item !== bookingRow.time);
 
           if (nextCount === 0) {
             tx.delete(lockRef);
