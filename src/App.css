@@ -1902,6 +1902,10 @@
     grid-template-columns: 1fr;
   }
 
+  .dash-photo-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
   .settings-grid {
     grid-template-columns: 1fr;
   }
@@ -3333,6 +3337,44 @@ p {
   border-radius: 10px;
   border: 1px solid var(--line);
   object-fit: cover;
+}
+
+.dash-photo-detail-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 14px;
+}
+
+.dash-photo-booking-list {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.dash-photo-booking-btn {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.dash-photo-booking-btn.active {
+  border-color: #111;
+  background: #f7f4ee;
+}
+
+.dash-photo-booking-btn span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.dash-photo-detail-panel {
+  display: grid;
+  gap: 12px;
 }
 
 .dash-photos-grid {

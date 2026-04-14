@@ -17,6 +17,7 @@ import { DETAIL_PACKAGES, getDetailPackageKey } from './detailPackages';
 type DashTab =
   | 'bookings'
   | 'photos'
+  | 'schedule'
   | 'users'
   | 'admin'
   | 'prices'
@@ -131,6 +132,16 @@ type NewsForm = {
   version: string;
   body: string;
   isEnabled: boolean;
+};
+
+type ScheduleSettings = {
+  weekdayOpen: string;
+  weekdayClose: string;
+  weekendOpen: string;
+  weekendClose: string;
+  weekdayCapacity: string;
+  weekendCapacity: string;
+  closedDays: string[];
 };
 
 function toBooking(id: string, data: DocumentData): Booking {
@@ -291,6 +302,18 @@ export default function DetailerDashboard({
   const reviews = useCollection('reviews', toReviewItem);
   const news = useCollection('siteNews', toNewsItem);
 
+  const [selectedPhotoBookingId, setSelectedPhotoBookingId] = useState('');
+  const [scheduleBusy, setScheduleBusy] = useState(false);
+  const [scheduleSettings, setScheduleSettings] = useState<ScheduleSettings>({
+    weekdayOpen: '16:00',
+    weekdayClose: '20:00',
+    weekendOpen: '08:00',
+    weekendClose: '20:00',
+    weekdayCapacity: '1',
+    weekendCapacity: '2',
+    closedDays: [],
+  });
+
   const [actionBusyId, setActionBusyId] = useState('');
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
@@ -365,6 +388,27 @@ export default function DetailerDashboard({
     body: '',
     isEnabled: true,
   });
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, 'settings', 'schedule'),
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        setScheduleSettings({
+          weekdayOpen: String(data.weekdayOpen ?? '16:00'),
+          weekdayClose: String(data.weekdayClose ?? '20:00'),
+          weekendOpen: String(data.weekendOpen ?? '08:00'),
+          weekendClose: String(data.weekendClose ?? '20:00'),
+          weekdayCapacity: String(data.weekdayCapacity ?? '1'),
+          weekendCapacity: String(data.weekendCapacity ?? '2'),
+          closedDays: Array.isArray(data.closedDays) ? data.closedDays.map((item) => String(item)) : [],
+        });
+      },
+      () => {}
+    );
+    return () => unsub();
+  }, []);
 
   const adminStats = useMemo(() => {
     const totalBookings = bookings.items.length;
@@ -1052,6 +1096,43 @@ export default function DetailerDashboard({
     }
   }
 
+  async function saveScheduleSettings() {
+    resetActionMessages();
+    setScheduleBusy(true);
+    try {
+      await updateDoc(doc(db, 'settings', 'schedule'), {
+        weekdayOpen: scheduleSettings.weekdayOpen,
+        weekdayClose: scheduleSettings.weekdayClose,
+        weekendOpen: scheduleSettings.weekendOpen,
+        weekendClose: scheduleSettings.weekendClose,
+        weekdayCapacity: Number(scheduleSettings.weekdayCapacity),
+        weekendCapacity: Number(scheduleSettings.weekendCapacity),
+        closedDays: scheduleSettings.closedDays,
+        updatedAt: serverTimestamp(),
+      });
+      setActionSuccess('Schedule settings updated.');
+    } catch (err) {
+      if (err instanceof FirebaseError && err.code === 'not-found') {
+        await addDoc(collection(db, 'settings'), {
+          id: 'schedule',
+          weekdayOpen: scheduleSettings.weekdayOpen,
+          weekdayClose: scheduleSettings.weekdayClose,
+          weekendOpen: scheduleSettings.weekendOpen,
+          weekendClose: scheduleSettings.weekendClose,
+          weekdayCapacity: Number(scheduleSettings.weekdayCapacity),
+          weekendCapacity: Number(scheduleSettings.weekendCapacity),
+          closedDays: scheduleSettings.closedDays,
+          updatedAt: serverTimestamp(),
+        });
+        setActionSuccess('Schedule settings created.');
+      } else {
+        setActionError(err instanceof FirebaseError ? `Save schedule failed: ${err.code}` : 'Save schedule failed.');
+      }
+    } finally {
+      setScheduleBusy(false);
+    }
+  }
+
   async function deleteNewsItem(itemId: string) {
     resetActionMessages();
     setActionBusyId(itemId);
@@ -1077,7 +1158,7 @@ export default function DetailerDashboard({
       </div>
 
       <div className="dash-tabs">
-        {(['bookings', 'photos', 'users', 'admin', 'prices', 'gallery', 'reviews', 'news'] as DashTab[]).map((t) => (
+        {(['bookings', 'photos', 'schedule', 'users', 'admin', 'prices', 'gallery', 'reviews', 'news'] as DashTab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -1282,30 +1363,124 @@ export default function DetailerDashboard({
               <p className="dash-meta">No booking photos yet.</p>
             )}
             {!bookings.loading && !bookings.error && (
-              <div className="dash-photos-grid">
-                {(bookings.items as Booking[])
-                  .filter((b) => getBookingPhotos(b).length > 0)
-                  .map((b) => (
-                    <div className="dash-photo-card" key={b.id}>
-                      <div className="dash-photo-strip">
-                        {getBookingPhotos(b).map((photo) => (
-                          <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" title={photo.label}>
-                            <img src={photo.url} alt={photo.label} className="dash-photo-img" />
-                          </a>
-                        ))}
-                      </div>
-                      <div className="dash-photo-info">
+              <div className="dash-photo-detail-layout">
+                <div className="dash-photo-booking-list">
+                  {(bookings.items as Booking[])
+                    .filter((b) => getBookingPhotos(b).length > 0)
+                    .map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        className={`dash-photo-booking-btn${selectedPhotoBookingId === b.id ? ' active' : ''}`}
+                        onClick={() => setSelectedPhotoBookingId(b.id)}
+                      >
                         <strong>{b.customerName}</strong>
                         <span>{b.packageLabel || b.packageType}</span>
                         <span>{b.date} at {b.time}</span>
-                        <span>{getBookingPhotos(b).map((photo) => photo.label).join(' • ')}</span>
-                        <span className="dash-badge">{b.status}</span>
-                      </div>
-                    </div>
-                  ))}
+                      </button>
+                    ))}
+                </div>
+                <div className="dash-photo-detail-panel">
+                  {(() => {
+                    const selected = (bookings.items as Booking[]).find((b) => b.id === selectedPhotoBookingId)
+                      ?? (bookings.items as Booking[]).find((b) => getBookingPhotos(b).length > 0);
+
+                    if (!selected) return <p className="dash-meta">Select a booking to view uploaded detail photos.</p>;
+
+                    return (
+                      <>
+                        <h3>{selected.customerName}</h3>
+                        <p className="dash-meta">{selected.packageLabel || selected.packageType} • {selected.date} at {selected.time}</p>
+                        <div className="dash-photos-grid">
+                          {getBookingPhotos(selected).map((photo) => (
+                            <div className="dash-photo-card" key={photo.url}>
+                              <a href={photo.url} target="_blank" rel="noreferrer" title={photo.label}>
+                                <img src={photo.url} alt={photo.label} className="dash-photo-img" />
+                              </a>
+                              <div className="dash-photo-info">
+                                <strong>{photo.label}</strong>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             )}
           </>
+        )}
+
+        {tab === 'schedule' && (
+          <div className="dash-create-form">
+            <label>
+              Weekday Open
+              <input
+                type="time"
+                value={scheduleSettings.weekdayOpen}
+                onChange={(e) => setScheduleSettings((prev) => ({ ...prev, weekdayOpen: e.target.value }))}
+              />
+            </label>
+            <label>
+              Weekday Close
+              <input
+                type="time"
+                value={scheduleSettings.weekdayClose}
+                onChange={(e) => setScheduleSettings((prev) => ({ ...prev, weekdayClose: e.target.value }))}
+              />
+            </label>
+            <label>
+              Weekend Open
+              <input
+                type="time"
+                value={scheduleSettings.weekendOpen}
+                onChange={(e) => setScheduleSettings((prev) => ({ ...prev, weekendOpen: e.target.value }))}
+              />
+            </label>
+            <label>
+              Weekend Close
+              <input
+                type="time"
+                value={scheduleSettings.weekendClose}
+                onChange={(e) => setScheduleSettings((prev) => ({ ...prev, weekendClose: e.target.value }))}
+              />
+            </label>
+            <label>
+              Weekday Cars
+              <input
+                type="number"
+                min="0"
+                value={scheduleSettings.weekdayCapacity}
+                onChange={(e) => setScheduleSettings((prev) => ({ ...prev, weekdayCapacity: e.target.value }))}
+              />
+            </label>
+            <label>
+              Weekend Cars
+              <input
+                type="number"
+                min="0"
+                value={scheduleSettings.weekendCapacity}
+                onChange={(e) => setScheduleSettings((prev) => ({ ...prev, weekendCapacity: e.target.value }))}
+              />
+            </label>
+            <label>
+              Closed Dates
+              <textarea
+                value={scheduleSettings.closedDays.join(', ')}
+                onChange={(e) => setScheduleSettings((prev) => ({
+                  ...prev,
+                  closedDays: e.target.value.split(',').map((item) => item.trim()).filter(Boolean),
+                }))}
+                placeholder="2026-12-25, 2026-12-26"
+              />
+            </label>
+            <div className="dash-create-actions">
+              <button type="button" onClick={saveScheduleSettings} disabled={scheduleBusy}>
+                {scheduleBusy ? 'Saving...' : 'Save Schedule'}
+              </button>
+            </div>
+          </div>
         )}
 
         {tab === 'users' && (
