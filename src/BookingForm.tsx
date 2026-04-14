@@ -59,15 +59,18 @@ function formatTimeLabel(timeValue: string): string {
   return `${normalizedHour}:${minuteText} ${suffix}`;
 }
 
-function getUpcomingDates(total = 21): string[] {
+function getUpcomingDates(): string[] {
   const dates: string[] = [];
   const today = new Date();
   today.setHours(12, 0, 0, 0);
 
-  for (let i = 0; i < total; i += 1) {
-    const next = new Date(today);
-    next.setDate(today.getDate() + i);
-    dates.push(next.toISOString().slice(0, 10));
+  const end = new Date(today);
+  end.setFullYear(end.getFullYear() + 1);
+
+  const current = new Date(today);
+  while (current <= end) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setDate(current.getDate() + 1);
   }
 
   return dates;
@@ -93,7 +96,7 @@ export default function BookingForm({ user }: { user: User }) {
   const [bookedDates, setBookedDates] = useState<Set<string>>(new Set());
   const [loadingBookedDates, setLoadingBookedDates] = useState(true);
   const [packages, setPackages] = useState<PackageOption[]>(DEFAULT_PACKAGES);
-  const upcomingDates = useMemo(() => getUpcomingDates(21), []);
+  const upcomingDates = useMemo(() => getUpcomingDates(), []);
   const availableSlots = useMemo(() => getScheduleSlots(form.date), [form.date]);
 
   useEffect(() => {
@@ -421,7 +424,7 @@ export default function BookingForm({ user }: { user: User }) {
       <div className="booking-scheduler-card">
         <div className="booking-scheduler-head">
           <strong>Schedule *</strong>
-          <span>Weekdays: 4PM–8PM • Weekends: 8AM–8PM</span>
+          <span>1 car per day • Weekdays: 4PM–8PM • Weekends: 8AM–8PM</span>
         </div>
 
         <div className="booking-date-grid">
