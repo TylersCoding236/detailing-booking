@@ -11,6 +11,7 @@ import DetailerDashboard from './DetailerDashboard.tsx';
 import HomePage from './HomePage';
 import SettingsPage from './SettingsPage';
 import VerifyAccountPage from './VerifyAccountPage.tsx';
+import { DETAIL_PACKAGES } from './detailPackages';
 import './App.css';
 
 type Page =
@@ -87,14 +88,19 @@ function LearnMorePage() {
 }
 
 function BookNowPage({ user }: { user: User | null }) {
+  const sortedPackages = [...DETAIL_PACKAGES].sort(
+    (a, b) => a.displayOrder - b.displayOrder
+  );
+
   return (
     <section className="panel booking-panel fade-in">
       <div className="booking-header">
-        <h2>Book Now</h2>
+        <p className="eyebrow">Quick Booking</p>
+        <h2>Book Your Detail</h2>
         <p>
           {user
-            ? 'Choose your date and time, and we will confirm your booking shortly.'
-            : 'Create an account or log in to book an appointment.'}
+            ? 'Choose your package, pick an open time, and send your request.'
+            : 'To keep things simple, sign in first and then finish your booking in a few quick steps.'}
         </p>
       </div>
       {user ? (
@@ -102,13 +108,10 @@ function BookNowPage({ user }: { user: User | null }) {
           <aside className="booking-note">
             <h3>Before You Submit</h3>
             <ul>
-              <li>Booking is tied to your signed-in account.</li>
-              <li>Verify your account details before first booking.</li>
-              <li>Choose one package: Exterior, Interior, or Full Detail.</li>
-              <li>Upload the required interior and/or exterior photos for your package.</li>
-              <li>Pick any open day through next year.</li>
-              <li>Only one car is booked per day because a full detail takes about 3 hours.</li>
-              <li>Add notes for vehicle size or requests.</li>
+              <li>Pick one package that matches the service you want.</li>
+              <li>Choose any open day and time shown on the calendar.</li>
+              <li>Upload the required photos for your selected package.</li>
+              <li>Add any helpful notes about your vehicle.</li>
             </ul>
           </aside>
           <div className="booking-form-shell">
@@ -116,18 +119,56 @@ function BookNowPage({ user }: { user: User | null }) {
           </div>
         </div>
       ) : (
-        <div className="booking-auth-prompt">
-          <p>
-            Already have an account? Log in to book. New here? Sign up in under
-            a minute.
-          </p>
-          <div className="booking-auth-actions">
-            <a className="primary-btn" href="#/login">
-              Log In
-            </a>
-            <a className="ghost-btn" href="#/signup">
-              Sign Up
-            </a>
+        <div className="booking-guest-simple">
+          <div className="booking-auth-prompt booking-auth-prompt--simple">
+            <h3>Start in 3 easy steps</h3>
+            <div className="booking-guest-steps">
+              <div className="booking-guest-step">
+                <strong>1</strong>
+                <div>
+                  <span>Sign in</span>
+                  <p>Log in or create your account.</p>
+                </div>
+              </div>
+              <div className="booking-guest-step">
+                <strong>2</strong>
+                <div>
+                  <span>Choose service</span>
+                  <p>Pick Exterior, Interior, or Full Detail.</p>
+                </div>
+              </div>
+              <div className="booking-guest-step">
+                <strong>3</strong>
+                <div>
+                  <span>Select time</span>
+                  <p>Choose an open day and send your request.</p>
+                </div>
+              </div>
+            </div>
+            <div className="booking-auth-actions">
+              <a className="primary-btn" href="#/login">
+                Log In to Book
+              </a>
+              <a className="ghost-btn" href="#/signup">
+                Create Account
+              </a>
+              <a className="ghost-btn" href="#/pricing">
+                View Pricing
+              </a>
+            </div>
+          </div>
+
+          <div className="booking-guest-packages">
+            {sortedPackages.map((pkg) => (
+              <article key={pkg.key} className="booking-guest-package-card">
+                <span className="booking-guest-package-icon">{pkg.icon}</span>
+                <div>
+                  <h3>{pkg.title}</h3>
+                  <p>{pkg.description}</p>
+                </div>
+                <strong>${pkg.price}</strong>
+              </article>
+            ))}
           </div>
         </div>
       )}

@@ -82,6 +82,7 @@ type NewsItem = {
   version: string;
   body: string;
   isEnabled: boolean;
+  sortTime: number;
 };
 
 const NEWS_SEEN_KEY = 'td_news_last_seen_id';
@@ -130,6 +131,21 @@ function toGalleryItem(id: string, data: DocumentData): GalleryItem {
   };
 }
 
+function getSortTime(value: unknown): number {
+  if (value && typeof value === 'object' && 'toMillis' in value && typeof (value as { toMillis?: unknown }).toMillis === 'function') {
+    return (value as { toMillis: () => number }).toMillis();
+  }
+
+  if (typeof value === 'number') return value;
+
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
+}
+
 function toNewsItem(id: string, data: DocumentData): NewsItem {
   return {
     id,
@@ -137,6 +153,7 @@ function toNewsItem(id: string, data: DocumentData): NewsItem {
     version: String(data.version ?? ''),
     body: String(data.body ?? ''),
     isEnabled: data.isEnabled !== false,
+    sortTime: Math.max(getSortTime(data.updatedAt), getSortTime(data.createdAt)),
   };
 }
 
@@ -229,7 +246,7 @@ export default function HomePage({
         const rows = snap.docs
           .map((docSnap) => toNewsItem(docSnap.id, docSnap.data()))
           .filter((item) => item.isEnabled)
-          .reverse();
+          .sort((a, b) => (b.sortTime - a.sortTime) || b.id.localeCompare(a.id));
         setNewsItems(rows);
       },
       () => {
@@ -484,7 +501,7 @@ export default function HomePage({
             <article key={news.id} className={`hp-news-item${index === 0 ? ' hp-news-item-latest' : ''}`}>
               <div className="hp-news-title-row">
                 <strong>{news.title}</strong>
-                <span className="hp-news-id">Update {String(newsItems.length - index).padStart(2, '0')}</span>
+                <span className="hp-news-id">Update {String(index + 1).padStart(2, '0')}</span>
               </div>
 
               <div className="hp-news-meta-row">

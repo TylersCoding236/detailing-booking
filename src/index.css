@@ -14,8 +14,10 @@ body {
   min-height: 100vh;
   font-family: 'Manrope', sans-serif;
   line-height: 1.5;
-  color: #111;
-  background: #fff;
+  color: #f5f7fb;
+  background: linear-gradient(180deg, #05070b 0%, #0b0f15 100%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {

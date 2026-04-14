@@ -1,16 +1,16 @@
 :root {
-  --bg: #fcfbf8;
-  --text: #131313;
-  --muted: #66625d;
-  --line: #ddd6cd;
-  --surface: rgba(255, 255, 255, 0.78);
-  --surface-strong: #f4efe8;
-  --shadow: 0 24px 60px rgba(18, 14, 8, 0.08);
-  --accent: #181613;
-  --accent-hover: #3b352f;
-  --sand: #efe4d6;
-  --sand-strong: #e5d3bc;
-  --olive: #5f6b4e;
+  --bg: #07090d;
+  --text: #f5f7fb;
+  --muted: #a7adba;
+  --line: rgba(255, 255, 255, 0.12);
+  --surface: linear-gradient(180deg, rgba(23, 26, 33, 0.95), rgba(11, 13, 18, 0.98));
+  --surface-strong: #141922;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+  --accent: #d7263d;
+  --accent-hover: #f1455d;
+  --sand: #171b23;
+  --sand-strong: #1f2530;
+  --olive: #d7263d;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1449,10 +1449,10 @@
   right: 0;
   transform: translateY(-50%);
   z-index: 1150;
-  border: 1px solid #181613;
+  border: 1px solid rgba(255, 77, 103, 0.45);
   border-right: none;
   border-radius: 12px 0 0 12px;
-  background: #181613;
+  background: linear-gradient(135deg, #151922, #0d1016);
   color: #fff;
   padding: 10px 12px;
   display: inline-flex;
@@ -1461,6 +1461,7 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   cursor: pointer;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
 }
 
 .hp-news-toggle-text {
@@ -1471,8 +1472,8 @@
   min-width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: #fff;
-  color: #181613;
+  background: linear-gradient(135deg, #ff4d67, #b3132a);
+  color: #fff;
   font-size: 0.74rem;
   font-weight: 800;
   display: inline-flex;
@@ -1483,14 +1484,14 @@
 
 .hp-news-toggle:hover,
 .hp-news-toggle-open {
-  background: #fff;
-  color: #181613;
+  background: linear-gradient(135deg, #ff4d67, #b3132a);
+  color: #fff;
 }
 
 .hp-news-toggle:hover .hp-news-badge,
 .hp-news-toggle-open .hp-news-badge {
-  background: #181613;
-  color: #fff;
+  background: #fff;
+  color: #b3132a;
 }
 
 .hp-news-panel {
@@ -1500,10 +1501,10 @@
   right: -380px;
   width: min(340px, 92vw);
   height: min(480px, 70vh);
-  background: rgba(252, 251, 248, 0.98);
-  border: 1px solid rgba(24, 22, 19, 0.14);
+  background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(11, 14, 19, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  box-shadow: 0 16px 34px rgba(24, 22, 19, 0.16);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.34);
   z-index: 1140;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -1518,7 +1519,7 @@
 
 .hp-news-head {
   padding: 14px;
-  border-bottom: 1px solid rgba(24, 22, 19, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1529,26 +1530,28 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.9rem;
+  color: #f7f8fb;
 }
 
 .hp-news-sub {
   margin: 5px 0 0;
   font-size: 0.8rem;
-  color: #6a635b;
+  color: #a7adba;
 }
 
 .hp-news-head button {
-  border: 1px solid rgba(24, 22, 19, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
-  background: #fff;
-  color: #181613;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f7f8fb;
   width: 30px;
   height: 30px;
   cursor: pointer;
 }
 
 .hp-news-head button:hover {
-  background: #181613;
+  background: #ff4d67;
+  border-color: #ff4d67;
   color: #fff;
 }
 
@@ -1560,17 +1563,17 @@
 }
 
 .hp-news-item {
-  border: 1px solid rgba(24, 22, 19, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 10px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.03);
   display: grid;
   gap: 7px;
 }
 
 .hp-news-item-latest {
-  border-color: rgba(24, 22, 19, 0.2);
-  box-shadow: 0 8px 18px rgba(24, 22, 19, 0.08);
+  border-color: rgba(255, 77, 103, 0.3);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
 }
 
 .hp-news-title-row {
@@ -1585,7 +1588,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #7c756d;
+  color: #ff7d90;
 }
 
 .hp-news-meta-row {
@@ -1600,20 +1603,20 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #5a544d;
-  border: 1px solid rgba(24, 22, 19, 0.16);
+  color: #d5dbe7;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
   padding: 2px 8px;
 }
 
 .hp-news-version-muted {
-  border-color: rgba(24, 22, 19, 0.1);
-  color: #7b746c;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #9ea7b8;
 }
 
 .hp-news-item p {
   margin: 0;
-  color: #4e4944;
+  color: #c4cbda;
   line-height: 1.5;
 }
 
@@ -1622,7 +1625,7 @@
   padding-left: 18px;
   display: grid;
   gap: 6px;
-  color: #4e4944;
+  color: #c4cbda;
 }
 
 .hp-news-points li {
@@ -1632,34 +1635,134 @@
 .hp-news-latest-pill {
   display: inline-flex;
   width: fit-content;
-  border: 1px solid rgba(24, 22, 19, 0.2);
+  border: 1px solid rgba(255, 77, 103, 0.3);
+  background: rgba(255, 77, 103, 0.1);
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 700;
-  color: #181613;
+  color: #ff7d90;
 }
 
 .hp-news-empty {
   margin: 6px 0 0;
-  color: #6a635b;
+  color: #a7adba;
 }
 
 .booking-auth-prompt {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 18px;
-  background: #fff;
+  background: linear-gradient(180deg, rgba(20, 24, 31, 0.95), rgba(11, 14, 19, 0.98));
   display: grid;
   gap: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.booking-auth-prompt--simple {
+  padding: 22px;
+}
+
+.booking-auth-prompt--simple h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.booking-guest-simple {
+  display: grid;
+  gap: 14px;
+}
+
+.booking-guest-steps {
+  display: grid;
+  gap: 10px;
+}
+
+.booking-guest-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.booking-guest-step strong {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ff4d67, #b3132a);
+  color: #fff;
+  font-size: 0.82rem;
+}
+
+.booking-guest-step span {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.booking-guest-step p {
+  margin: 0;
 }
 
 .booking-auth-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.booking-guest-packages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.booking-guest-package-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 10px;
+}
+
+.booking-guest-package-card h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.booking-guest-package-card p {
+  margin: 0;
+}
+
+.booking-guest-package-card strong {
+  color: #ff7d90;
+  font-size: 1.1rem;
+}
+
+.booking-guest-package-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 77, 103, 0.12);
+  border: 1px solid rgba(255, 77, 103, 0.24);
+  color: #fff;
+  font-weight: 800;
 }
 
 .signed-dashboard {
@@ -2798,6 +2901,12 @@ p {
 }
 
 .auth-page {
+  display: flex;
+  justify-content: center;
+}
+
+.auth-simple-shell {
+  width: min(460px, 100%);
   display: grid;
   gap: 14px;
 }
@@ -2805,6 +2914,7 @@ p {
 .auth-head {
   display: grid;
   gap: 8px;
+  text-align: left;
 }
 
 .auth-status {
@@ -2814,6 +2924,15 @@ p {
   background: #fff;
   display: grid;
   gap: 4px;
+}
+
+.auth-status--simple strong {
+  font-size: 0.95rem;
+}
+
+.auth-status--simple span {
+  color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .auth-mode-toggle {
@@ -2835,6 +2954,27 @@ p {
 .auth-tab:hover {
   background: #111;
   color: #fff;
+}
+
+.auth-switch {
+  margin: 0;
+  text-align: center;
+}
+
+.auth-switch a {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-switch a:hover {
+  color: #ff7d90;
+}
+
+.auth-logout-btn {
+  width: 100%;
+  margin-top: 0;
+  text-align: center;
 }
 
 .auth-form {
@@ -3607,3 +3747,327 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* Public facelift: graphite / black / red */
+.site-shell {
+  background:
+    radial-gradient(circle at top left, rgba(215, 38, 61, 0.2), transparent 0, transparent 34%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.06), transparent 0, transparent 28%),
+    linear-gradient(180deg, #05070b 0%, #0b0f15 100%);
+}
+
+.site-header {
+  background: rgba(7, 9, 13, 0.86);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+}
+
+.brand,
+.menu-btn,
+.menu-dropdown a,
+.menu-logout-btn,
+.account-name,
+.page-wrap h1,
+.page-wrap h2,
+.page-wrap h3,
+.page-wrap strong,
+.hp-root,
+.hp-headline,
+.hp-section-heading,
+.hp-service-card h3,
+.hp-service-price,
+.hp-why-card h3,
+.hp-step-card h3,
+.hp-proof-card strong,
+.hp-gallery-copy strong,
+.hp-process-card h3,
+.hp-hero-panel h2,
+.price-row h3,
+.price-value,
+.price-modal-head h3,
+.price-modal-value {
+  color: #f7f8fb;
+}
+
+.brand::before {
+  background: linear-gradient(135deg, #ff4d67, #d7263d);
+  box-shadow: 0 0 14px rgba(215, 38, 61, 0.7);
+}
+
+.menu-btn,
+.menu-dropdown,
+.booking-form-shell,
+.auth-form,
+.verify-form,
+.booking-note,
+.schema-note,
+.auth-status,
+.booking-photo-section,
+.booking-scheduler-card,
+.price-card,
+.price-modal,
+.booking-account-card,
+.booking-verify-card,
+.learn-card,
+.panel {
+  background: linear-gradient(180deg, rgba(20, 24, 31, 0.95), rgba(11, 14, 19, 0.98));
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.menu-dropdown a,
+.menu-logout-btn,
+.page-wrap p,
+.booking-note ul,
+.pricing-subtitle,
+.price-description,
+.price-modal-summary,
+.price-modal-meta,
+.booking-selected-summary,
+.booking-scheduler-head span,
+.schedule-day-btn span,
+.schedule-day-btn small,
+.auth-status,
+.auth-head p,
+.learn-card p,
+.schema-note ul,
+.hp-sub,
+.hp-section-label,
+.hp-review-text,
+.hp-review-name,
+.hp-info-card p,
+.hp-info-list,
+.hp-hours-note,
+.hp-gallery-note,
+.hp-pricing-list li,
+.hp-faq-a,
+.hp-mini-step p,
+.hp-proof-card p,
+.hp-process-card p,
+.hp-gallery-copy p,
+.hp-service-card p,
+.hp-why-card p,
+.hp-step-card p {
+  color: #b7becc;
+}
+
+.primary-btn,
+.hp-btn-primary,
+.price-view-btn,
+.price-modal-book,
+.booking-panel button,
+.verify-form button,
+.auth-form button {
+  background: linear-gradient(135deg, #ff4d67, #b3132a);
+  border-color: #ff4d67;
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(215, 38, 61, 0.28);
+}
+
+.primary-btn:hover,
+.hp-btn-primary:hover,
+.price-view-btn:hover,
+.price-modal-book:hover,
+.booking-panel button:hover,
+.verify-form button:hover,
+.auth-form button:hover {
+  background: #fff;
+  color: #111;
+}
+
+.ghost-btn,
+.hp-btn-ghost,
+.price-modal-secondary,
+.auth-tab {
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #f7f8fb;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ghost-btn:hover,
+.hp-btn-ghost:hover,
+.price-modal-secondary:hover,
+.auth-tab.active,
+.auth-tab:hover {
+  background: rgba(215, 38, 61, 0.16);
+  border-color: #ff4d67;
+  color: #fff;
+}
+
+.booking-panel input,
+.booking-panel select,
+.booking-panel textarea,
+.auth-form input,
+.auth-form select,
+.verify-form input,
+.verify-form textarea {
+  background: #0d1117;
+  color: #f6f8fb;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.booking-panel input::placeholder,
+.booking-panel textarea::placeholder,
+.auth-form input::placeholder,
+.verify-form input::placeholder,
+.verify-form textarea::placeholder {
+  color: #8d96a7;
+}
+
+.booking-panel .schedule-day-btn,
+.booking-panel .schedule-slot-btn,
+.booking-photo-field {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #eef2f7;
+}
+
+.booking-panel .schedule-day-btn:hover,
+.booking-panel .schedule-slot-btn:hover {
+  background: rgba(215, 38, 61, 0.14);
+}
+
+.schedule-day-btn.selected,
+.schedule-slot-btn.selected {
+  background: linear-gradient(135deg, #ff4d67, #b3132a) !important;
+  border-color: #ff4d67 !important;
+}
+
+.schedule-day-btn.booked {
+  background: rgba(215, 38, 61, 0.16) !important;
+  color: #ff9baa !important;
+  border-color: rgba(255, 77, 103, 0.38) !important;
+}
+
+.hp-root {
+  background:
+    radial-gradient(circle at top, rgba(215, 38, 61, 0.14), transparent 0, transparent 30%),
+    linear-gradient(180deg, #06080c 0%, #0b0f15 100%);
+  color: #f6f8fb;
+}
+
+.hp-root::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.hp-scroll-progress,
+.offer-tag,
+.hp-service-tag,
+.hp-pricing-badge,
+.hp-why-icon,
+.hp-mini-step span,
+.hp-process-number,
+.hp-float-book {
+  background: linear-gradient(135deg, #ff4d67, #b3132a);
+  color: #fff;
+}
+
+.hp-banner,
+.hp-stats-section,
+.hp-cta-section,
+.hp-footer,
+.hp-process-aside {
+  background: linear-gradient(135deg, #0d1016, #161b24);
+}
+
+.hp-hero-bg {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(215, 38, 61, 0.16), transparent 0, transparent 30%),
+    radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.08), transparent 0, transparent 24%),
+    linear-gradient(180deg, rgba(9, 12, 17, 0.92), rgba(14, 18, 26, 0.98));
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.hp-hero-inner,
+.hp-hero-panel,
+.hp-process-card,
+.hp-gallery-feature,
+.hp-service-card,
+.hp-why-card,
+.hp-step-card,
+.hp-review-card,
+.hp-info-card,
+.hp-pricing-list,
+.hp-faq-list,
+.hp-hours-list {
+  background: linear-gradient(180deg, rgba(20, 24, 31, 0.92), rgba(11, 14, 19, 0.98));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
+}
+
+.hp-hero-badge,
+.hp-service-icon,
+.hp-trust-badge,
+.hp-scroll-top {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f7f8fb;
+}
+
+.hp-headline-accent {
+  background: linear-gradient(135deg, #ff4d67, #b3132a);
+}
+
+.hp-btn-white {
+  background: #f7f8fb;
+  color: #111;
+  border-color: #f7f8fb;
+}
+
+.hp-btn-white:hover,
+.hp-scroll-top:hover {
+  background: #ff4d67;
+  color: #fff;
+  border-color: #ff4d67;
+}
+
+.hp-pricing-teaser,
+.hp-steps-section,
+.hp-trust-bar {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.hp-price-tag,
+.hp-service-link,
+.hp-panel-kicker,
+.price-chip,
+.price-modal-kicker {
+  color: #ff7d90;
+}
+
+.price-chip {
+  border-color: rgba(255, 77, 103, 0.3);
+  background: rgba(215, 38, 61, 0.08);
+}
+
+.hp-gallery-overlay {
+  background: rgba(6, 8, 12, 0.04);
+}
+
+.hp-gallery-item:hover .hp-gallery-overlay {
+  background: rgba(6, 8, 12, 0.58);
+}
+
+.hp-footer-brand p,
+.hp-footer-links strong,
+.hp-footer-links a,
+.hp-footer-bottom,
+.hp-stat-label,
+.hp-cta-inner p {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 680px) {
+  .panel {
+    border-radius: 18px;
+  }
+
+  .site-header {
+    padding-inline: 14px;
+  }
+}
+
