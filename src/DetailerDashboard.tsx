@@ -33,6 +33,10 @@ type Booking = {
   packageLabel: string;
   basePrice: number | null;
   carPhotoUrl: string;
+  interiorFrontPhotoUrl: string;
+  interiorBackPhotoUrl: string;
+  exteriorFrontPhotoUrl: string;
+  exteriorSidePhotoUrl: string;
   bookedByUid: string;
   bookedByEmail: string;
   date: string;
@@ -140,6 +144,10 @@ function toBooking(id: string, data: DocumentData): Booking {
     packageLabel: String(data.packageLabel ?? ''),
     basePrice: typeof rawBasePrice === 'number' ? rawBasePrice : null,
     carPhotoUrl: String(data.carPhotoUrl ?? ''),
+    interiorFrontPhotoUrl: String(data.interiorFrontPhotoUrl ?? ''),
+    interiorBackPhotoUrl: String(data.interiorBackPhotoUrl ?? ''),
+    exteriorFrontPhotoUrl: String(data.exteriorFrontPhotoUrl ?? ''),
+    exteriorSidePhotoUrl: String(data.exteriorSidePhotoUrl ?? ''),
     bookedByUid: String(data.bookedByUid ?? ''),
     bookedByEmail: String(data.bookedByEmail ?? ''),
     date: String(data.date ?? ''),
@@ -147,6 +155,23 @@ function toBooking(id: string, data: DocumentData): Booking {
     status: String(data.status ?? 'pending'),
     notes: String(data.notes ?? ''),
   };
+}
+
+function getBookingPhotos(booking: Booking): Array<{ label: string; url: string }> {
+  const candidates = [
+    { label: 'Interior Front', url: booking.interiorFrontPhotoUrl },
+    { label: 'Interior Back', url: booking.interiorBackPhotoUrl },
+    { label: 'Exterior Front', url: booking.exteriorFrontPhotoUrl },
+    { label: 'Exterior Side', url: booking.exteriorSidePhotoUrl },
+    { label: 'Car Photo', url: booking.carPhotoUrl },
+  ].filter((item) => item.url);
+
+  const seen = new Set<string>();
+  return candidates.filter((item) => {
+    if (seen.has(item.url)) return false;
+    seen.add(item.url);
+    return true;
+  });
 }
 
 function toUserRecord(id: string, data: DocumentData): UserRecord {
@@ -1141,18 +1166,20 @@ export default function DetailerDashboard({
                       <span>{b.phone || '(missing phone)'}</span>
                       <span>{b.address || '(missing address)'}</span>
                       <span>{b.date} at {b.time}</span>
-                      {b.carPhotoUrl && (
-                        <a href={b.carPhotoUrl} target="_blank" rel="noreferrer">
-                          View uploaded car photo
-                        </a>
+                      {getBookingPhotos(b).length > 0 && (
+                        <span>{getBookingPhotos(b).length} uploaded photos attached</span>
                       )}
                       {b.notes && <span className="dash-notes">{b.notes}</span>}
                     </div>
                     <div className="dash-row-right">
-                      {b.carPhotoUrl && (
-                        <a href={b.carPhotoUrl} target="_blank" rel="noreferrer">
-                          <img className="dash-thumb" src={b.carPhotoUrl} alt="Car upload" />
-                        </a>
+                      {getBookingPhotos(b).length > 0 && (
+                        <div className="dash-thumb-grid">
+                          {getBookingPhotos(b).map((photo) => (
+                            <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" title={photo.label}>
+                              <img className="dash-thumb" src={photo.url} alt={photo.label} />
+                            </a>
+                          ))}
+                        </div>
                       )}
                       <span className="dash-badge">{b.status || 'pending'}</span>
                       <div className="dash-row-actions">
@@ -1251,22 +1278,27 @@ export default function DetailerDashboard({
           <>
             {bookings.loading && <p className="dash-meta">Loading...</p>}
             {bookings.error && <p className="dash-error">{bookings.error}</p>}
-            {!bookings.loading && !bookings.error && (bookings.items as Booking[]).filter((b) => b.carPhotoUrl).length === 0 && (
+            {!bookings.loading && !bookings.error && (bookings.items as Booking[]).filter((b) => getBookingPhotos(b).length > 0).length === 0 && (
               <p className="dash-meta">No booking photos yet.</p>
             )}
             {!bookings.loading && !bookings.error && (
               <div className="dash-photos-grid">
                 {(bookings.items as Booking[])
-                  .filter((b) => b.carPhotoUrl)
+                  .filter((b) => getBookingPhotos(b).length > 0)
                   .map((b) => (
                     <div className="dash-photo-card" key={b.id}>
-                      <a href={b.carPhotoUrl} target="_blank" rel="noreferrer">
-                        <img src={b.carPhotoUrl} alt={`${b.customerName} car`} className="dash-photo-img" />
-                      </a>
+                      <div className="dash-photo-strip">
+                        {getBookingPhotos(b).map((photo) => (
+                          <a key={photo.url} href={photo.url} target="_blank" rel="noreferrer" title={photo.label}>
+                            <img src={photo.url} alt={photo.label} className="dash-photo-img" />
+                          </a>
+                        ))}
+                      </div>
                       <div className="dash-photo-info">
                         <strong>{b.customerName}</strong>
                         <span>{b.packageLabel || b.packageType}</span>
                         <span>{b.date} at {b.time}</span>
+                        <span>{getBookingPhotos(b).map((photo) => photo.label).join(' • ')}</span>
                         <span className="dash-badge">{b.status}</span>
                       </div>
                     </div>

@@ -105,7 +105,7 @@ function BookNowPage({ user }: { user: User | null }) {
               <li>Booking is tied to your signed-in account.</li>
               <li>Verify your account details before first booking.</li>
               <li>Choose one package: Exterior, Interior, or Full Detail.</li>
-              <li>Upload a car photo so final pricing can be reviewed.</li>
+              <li>Upload the required interior and/or exterior photos for your package.</li>
               <li>Pick any open day through next year.</li>
               <li>Only one car is booked per day because a full detail takes about 3 hours.</li>
               <li>Add notes for vehicle size or requests.</li>

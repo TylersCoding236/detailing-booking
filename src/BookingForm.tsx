@@ -23,12 +23,49 @@ const EMPTY: FormState = {
 };
 
 type PackageOption = { key: DetailPackageKey; label: string; price: number };
+type PhotoField = 'interiorFront' | 'interiorBack' | 'exteriorFront' | 'exteriorSide';
+type PhotoFileMap = Record<PhotoField, File | null>;
+type PhotoPreviewMap = Record<PhotoField, string>;
 
 const DEFAULT_PACKAGES: PackageOption[] = DETAIL_PACKAGES.map((item) => ({
   key: item.key,
   label: item.title,
   price: item.price,
 }));
+
+const PHOTO_FIELD_META: Record<PhotoField, { label: string; hint: string }> = {
+  interiorFront: { label: 'Interior Front Photo', hint: 'Front seats / dash view' },
+  interiorBack: { label: 'Interior Back Photo', hint: 'Back seat / rear interior view' },
+  exteriorFront: { label: 'Exterior Front Photo', hint: 'Front bumper / hood view' },
+  exteriorSide: { label: 'Exterior Side Photo', hint: 'Driver or passenger side view' },
+};
+
+function createEmptyPhotoFiles(): PhotoFileMap {
+  return {
+    interiorFront: null,
+    interiorBack: null,
+    exteriorFront: null,
+    exteriorSide: null,
+  };
+}
+
+function createEmptyPhotoPreviews(): PhotoPreviewMap {
+  return {
+    interiorFront: '',
+    interiorBack: '',
+    exteriorFront: '',
+    exteriorSide: '',
+  };
+}
+
+function getRequiredPhotoFields(packageType: FormState['packageType']): PhotoField[] {
+  if (packageType === 'interior') return ['interiorFront', 'interiorBack'];
+  if (packageType === 'exterior') return ['exteriorFront', 'exteriorSide'];
+  if (packageType === 'full') {
+    return ['interiorFront', 'interiorBack', 'exteriorFront', 'exteriorSide'];
+  }
+  return [];
+}
 
 type VerifiedProfile = {
   fullName: string;
@@ -111,14 +148,15 @@ export default function BookingForm({ user }: { user: User }) {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
+  const [photoFiles, setPhotoFiles] = useState<PhotoFileMap>(createEmptyPhotoFiles());
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<PhotoPreviewMap>(createEmptyPhotoPreviews());
   const [profile, setProfile] = useState<VerifiedProfile | null>(null);
   const [checkingProfile, setCheckingProfile] = useState(true);
   const [bookedCounts, setBookedCounts] = useState<Record<string, number>>({});
   const [bookedTimesByDate, setBookedTimesByDate] = useState<Record<string, string[]>>({});
   const [loadingBookedDates, setLoadingBookedDates] = useState(true);
   const [packages, setPackages] = useState<PackageOption[]>(DEFAULT_PACKAGES);
+  const requiredPhotoFields = useMemo(() => getRequiredPhotoFields(form.packageType), [form.packageType]);
   const upcomingDates = useMemo(() => getUpcomingDates(), []);
   const monthPages = useMemo(() => getMonthPages(upcomingDates), [upcomingDates]);
   const [monthIndex, setMonthIndex] = useState(0);
@@ -275,43 +313,45 @@ export default function BookingForm({ user }: { user: User }) {
     }
   }, [availableSlots, form.time]);
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoChange(field: PhotoField, e: React.ChangeEvent<HTMLInputElement>) {
     if (status !== 'idle') setStatus('idle');
     if (errorMsg) setErrorMsg('');
 
     const file = e.target.files?.[0] ?? null;
     if (!file) {
-      setPhotoFile(null);
-      setPhotoPreviewUrl('');
+      setPhotoFiles((prev) => ({ ...prev, [field]: null }));
+      setPhotoPreviewUrls((prev) => {
+        if (prev[field]) URL.revokeObjectURL(prev[field]);
+        return { ...prev, [field]: '' };
+      });
       return;
     }
 
     if (!file.type.startsWith('image/')) {
-      setErrorMsg('Please upload an image file for the car photo.');
-      setPhotoFile(null);
-      setPhotoPreviewUrl('');
+      setErrorMsg('Please upload image files only.');
       return;
     }
 
     if (file.size > 8 * 1024 * 1024) {
-      setErrorMsg('Image is too large. Please upload a file under 8MB.');
-      setPhotoFile(null);
-      setPhotoPreviewUrl('');
+      setErrorMsg('Each image must be under 8MB.');
       return;
     }
 
-    setPhotoFile(file);
     const objectUrl = URL.createObjectURL(file);
-    setPhotoPreviewUrl(objectUrl);
+    setPhotoFiles((prev) => ({ ...prev, [field]: file }));
+    setPhotoPreviewUrls((prev) => {
+      if (prev[field]) URL.revokeObjectURL(prev[field]);
+      return { ...prev, [field]: objectUrl };
+    });
   }
 
   useEffect(() => {
     return () => {
-      if (photoPreviewUrl) {
-        URL.revokeObjectURL(photoPreviewUrl);
-      }
+      Object.values(photoPreviewUrls).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
     };
-  }, [photoPreviewUrl]);
+  }, [photoPreviewUrls]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -347,21 +387,33 @@ export default function BookingForm({ user }: { user: User }) {
       return;
     }
 
-    if (!photoFile) {
-      setErrorMsg('Please upload a car photo so pricing can be reviewed.');
+    const missingPhoto = requiredPhotoFields.find((field) => !photoFiles[field]);
+    if (missingPhoto) {
+      setErrorMsg(`Please upload the required photos for this package. Missing: ${PHOTO_FIELD_META[missingPhoto].label}.`);
       return;
     }
 
     setStatus('saving');
     try {
       const selectedPkg = packages.find((p) => p.key === packageType) ?? { label: packageType, price: 0 };
-      const safeName = photoFile.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
-      const storageRef = ref(
-        storage,
-        `bookingPhotos/${user.uid}/${Date.now()}-${safeName}`
+
+      const uploadedPhotoEntries = await Promise.all(
+        requiredPhotoFields.map(async (field) => {
+          const file = photoFiles[field];
+          if (!file) throw new Error(`missing-photo-${field}`);
+          const safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+          const storageRef = ref(
+            storage,
+            `bookingPhotos/${user.uid}/${Date.now()}-${field}-${safeName}`
+          );
+          await uploadBytes(storageRef, file);
+          const url = await getDownloadURL(storageRef);
+          return [field, url] as const;
+        })
       );
-      await uploadBytes(storageRef, photoFile);
-      const carPhotoUrl = await getDownloadURL(storageRef);
+
+      const uploadedPhotos = Object.fromEntries(uploadedPhotoEntries) as Partial<Record<PhotoField, string>>;
+      const carPhotoUrl = uploadedPhotos.exteriorFront || uploadedPhotos.exteriorSide || uploadedPhotos.interiorFront || uploadedPhotos.interiorBack || '';
 
       const bookingRef = doc(collection(db, 'bookings'));
       const lockRef = doc(db, 'bookingLocks', date);
@@ -389,6 +441,10 @@ export default function BookingForm({ user }: { user: User }) {
           time,
           notes,
           carPhotoUrl,
+          interiorFrontPhotoUrl: uploadedPhotos.interiorFront ?? '',
+          interiorBackPhotoUrl: uploadedPhotos.interiorBack ?? '',
+          exteriorFrontPhotoUrl: uploadedPhotos.exteriorFront ?? '',
+          exteriorSidePhotoUrl: uploadedPhotos.exteriorSide ?? '',
           bookedByUid: user.uid,
           bookedByEmail: user.email ?? '',
           bookedByName: profile.fullName,
@@ -418,11 +474,11 @@ export default function BookingForm({ user }: { user: User }) {
       }));
       setStatus('saved');
       setForm(EMPTY);
-      setPhotoFile(null);
-      if (photoPreviewUrl) {
-        URL.revokeObjectURL(photoPreviewUrl);
-      }
-      setPhotoPreviewUrl('');
+      Object.values(photoPreviewUrls).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+      setPhotoFiles(createEmptyPhotoFiles());
+      setPhotoPreviewUrls(createEmptyPhotoPreviews());
     } catch (err) {
       console.error('Firestore write error:', err);
       if (err instanceof FirebaseError) {
@@ -437,6 +493,8 @@ export default function BookingForm({ user }: { user: User }) {
         }
       } else if (err instanceof Error && err.message === 'date-booked') {
         setErrorMsg('That slot was just taken or the day is full. Please choose another option.');
+      } else if (err instanceof Error && err.message.startsWith('missing-photo-')) {
+        setErrorMsg('Please upload all required photos before submitting.');
       } else {
         setErrorMsg('Booking failed. Please try again.');
       }
@@ -585,22 +643,39 @@ export default function BookingForm({ user }: { user: User }) {
         </p>
       )}
 
-      <label>
-        Car Photo *
-        <input
-          name="carPhoto"
-          type="file"
-          accept="image/*"
-          onChange={handlePhotoChange}
-        />
-      </label>
+      {form.packageType && (
+        <div className="booking-photo-section">
+          <div className="booking-scheduler-head">
+            <strong>Required Photos *</strong>
+            <span>
+              {form.packageType === 'interior' && 'Upload interior front and back photos.'}
+              {form.packageType === 'exterior' && 'Upload exterior front and side photos.'}
+              {form.packageType === 'full' && 'Upload all interior and exterior photos.'}
+            </span>
+          </div>
 
-      {photoPreviewUrl && (
-        <img
-          src={photoPreviewUrl}
-          alt="Car preview"
-          className="booking-photo-preview"
-        />
+          <div className="booking-photo-grid">
+            {requiredPhotoFields.map((field) => (
+              <label key={field} className="booking-photo-field">
+                <span>{PHOTO_FIELD_META[field].label} *</span>
+                <small>{PHOTO_FIELD_META[field].hint}</small>
+                <input
+                  name={field}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handlePhotoChange(field, e)}
+                />
+                {photoPreviewUrls[field] && (
+                  <img
+                    src={photoPreviewUrls[field]}
+                    alt={PHOTO_FIELD_META[field].label}
+                    className="booking-photo-preview"
+                  />
+                )}
+              </label>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="booking-selected-summary">
