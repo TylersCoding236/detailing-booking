@@ -245,6 +245,11 @@ function toNumberOrZero(value: string): number {
   return Number.isNaN(n) ? 0 : n;
 }
 
+function getDailyCapacity(dateValue: string): number {
+  const day = new Date(`${dateValue}T12:00:00`).getDay();
+  return day === 0 || day === 6 ? 2 : 1;
+}
+
 export default function DetailerDashboard({
   standardSiteAccess,
   onToggleStandardSiteAccess,
@@ -448,6 +453,12 @@ export default function DetailerDashboard({
         const bookingRef = doc(db, 'bookings', bookingId);
         const oldLockRef = doc(db, 'bookingLocks', bookingRow.date);
         const newLockRef = doc(db, 'bookingLocks', nextDate);
+        const oldStatus = String(bookingRow.status ?? 'pending').toLowerCase();
+        const oldBlocksDay = oldStatus !== 'cancelled';
+        const newBlocksDay = nextStatus !== 'cancelled';
+
+        const oldLockSnap = await tx.get(oldLockRef);
+        const newLockSnap = bookingRow.date === nextDate ? oldLockSnap : await tx.get(newLockRef);
 
         tx.update(bookingRef, {
           date: nextDate,
@@ -457,32 +468,63 @@ export default function DetailerDashboard({
           updatedAt: serverTimestamp(),
         });
 
-        if (bookingRow.date !== nextDate) {
-          const newLockSnap = await tx.get(newLockRef);
-          if (newLockSnap.exists()) {
-            const lockData = newLockSnap.data();
-            if (String(lockData.bookingId ?? '') !== bookingId) {
-              throw new Error('date-booked');
-            }
+        if (newBlocksDay) {
+          const currentCount = Number(newLockSnap.data()?.count ?? 0);
+          const currentTimes = Array.isArray(newLockSnap.data()?.times)
+            ? newLockSnap.data()!.times.map((item: unknown) => String(item))
+            : [];
+          const adjustedCount = bookingRow.date === nextDate && oldBlocksDay ? Math.max(0, currentCount - 1) : currentCount;
+          const adjustedTimes = bookingRow.date === nextDate && oldBlocksDay
+            ? currentTimes.filter((item) => item !== bookingRow.time)
+            : currentTimes;
+
+          if (adjustedCount >= getDailyCapacity(nextDate) || adjustedTimes.includes(nextTime)) {
+            throw new Error('date-booked');
           }
         }
 
-        if (bookingRow.date !== nextDate || nextStatus === 'cancelled') {
-          const oldLockSnap = await tx.get(oldLockRef);
-          if (oldLockSnap.exists()) {
-            const oldData = oldLockSnap.data();
-            if (String(oldData.bookingId ?? '') === bookingId) {
+        if (oldBlocksDay) {
+          const currentCount = Number(oldLockSnap.data()?.count ?? 0);
+          const currentTimes = Array.isArray(oldLockSnap.data()?.times)
+            ? oldLockSnap.data()!.times.map((item: unknown) => String(item))
+            : [];
+          const nextCount = Math.max(0, currentCount - 1);
+          const nextTimes = currentTimes.filter((item) => item !== bookingRow.time);
+
+          if ((bookingRow.date !== nextDate || !newBlocksDay) && currentCount > 0) {
+            if (nextCount === 0) {
               tx.delete(oldLockRef);
+            } else {
+              tx.set(oldLockRef, {
+                date: bookingRow.date,
+                bookingId,
+                bookedByUid: bookingRow.bookedByUid,
+                status: 'pending',
+                count: nextCount,
+                times: nextTimes,
+                updatedAt: serverTimestamp(),
+              }, { merge: true });
             }
           }
         }
 
-        if (nextStatus !== 'cancelled') {
+        if (newBlocksDay) {
+          const currentCount = Number(newLockSnap.data()?.count ?? 0);
+          const currentTimes = Array.isArray(newLockSnap.data()?.times)
+            ? newLockSnap.data()!.times.map((item: unknown) => String(item))
+            : [];
+          const baseCount = bookingRow.date === nextDate && oldBlocksDay ? Math.max(0, currentCount - 1) : currentCount;
+          const baseTimes = bookingRow.date === nextDate && oldBlocksDay
+            ? currentTimes.filter((item) => item !== bookingRow.time)
+            : currentTimes;
+
           tx.set(newLockRef, {
             date: nextDate,
             bookingId,
             bookedByUid: bookingRow.bookedByUid,
             status: nextStatus,
+            count: baseCount + 1,
+            times: Array.from(new Set([...baseTimes, nextTime])),
             updatedAt: serverTimestamp(),
           }, { merge: true });
         }
@@ -523,10 +565,26 @@ export default function DetailerDashboard({
 
         tx.delete(bookingRef);
 
-        if (lockSnap.exists()) {
-          const lockData = lockSnap.data();
-          if (String(lockData.bookingId ?? '') === bookingId) {
+        if (String(bookingRow.status ?? 'pending').toLowerCase() !== 'cancelled' && lockSnap.exists()) {
+          const currentCount = Number(lockSnap.data()?.count ?? 0);
+          const currentTimes = Array.isArray(lockSnap.data()?.times)
+            ? lockSnap.data()!.times.map((item: unknown) => String(item))
+            : [];
+          const nextCount = Math.max(0, currentCount - 1);
+          const nextTimes = currentTimes.filter((item) => item !== bookingRow.time);
+
+          if (nextCount === 0) {
             tx.delete(lockRef);
+          } else {
+            tx.set(lockRef, {
+              date: bookingRow.date,
+              bookingId,
+              bookedByUid: bookingRow.bookedByUid,
+              status: 'pending',
+              count: nextCount,
+              times: nextTimes,
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
           }
         }
       });

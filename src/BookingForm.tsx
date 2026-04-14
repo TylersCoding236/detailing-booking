@@ -41,14 +41,13 @@ function isWeekendDate(dateValue: string) {
   return day === 0 || day === 6;
 }
 
+function getDailyCapacity(dateValue: string) {
+  return isWeekendDate(dateValue) ? 2 : 1;
+}
+
 function getScheduleSlots(dateValue: string): string[] {
   if (!dateValue) return [];
-
-  const hours = isWeekendDate(dateValue)
-    ? [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
-    : [16, 17, 18, 19];
-
-  return hours.map((hour) => `${String(hour).padStart(2, '0')}:00`);
+  return isWeekendDate(dateValue) ? ['08:00', '13:00'] : ['16:00'];
 }
 
 function formatTimeLabel(timeValue: string): string {
@@ -81,8 +80,31 @@ function formatCalendarDate(dateValue: string): { top: string; bottom: string; o
   return {
     top: date.toLocaleDateString(undefined, { weekday: 'short' }),
     bottom: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-    openText: isWeekendDate(dateValue) ? '8AM–8PM' : '4PM–8PM',
+    openText: isWeekendDate(dateValue) ? '2 cars' : '1 car',
   };
+}
+
+function getMonthPages(dates: string[]) {
+  const byMonth = new Map<string, string[]>();
+
+  dates.forEach((dateValue) => {
+    const key = dateValue.slice(0, 7);
+    if (!byMonth.has(key)) byMonth.set(key, []);
+    byMonth.get(key)!.push(dateValue);
+  });
+
+  return Array.from(byMonth.entries()).map(([key, values]) => {
+    const monthDate = new Date(`${key}-01T12:00:00`);
+    const leadingBlankDays = monthDate.getDay();
+    const cells: Array<string | null> = Array.from({ length: leadingBlankDays }, () => null);
+    values.forEach((value) => cells.push(value));
+
+    return {
+      key,
+      title: monthDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      cells,
+    };
+  });
 }
 
 export default function BookingForm({ user }: { user: User }) {
@@ -93,11 +115,17 @@ export default function BookingForm({ user }: { user: User }) {
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
   const [profile, setProfile] = useState<VerifiedProfile | null>(null);
   const [checkingProfile, setCheckingProfile] = useState(true);
-  const [bookedDates, setBookedDates] = useState<Set<string>>(new Set());
+  const [bookedCounts, setBookedCounts] = useState<Record<string, number>>({});
+  const [bookedTimesByDate, setBookedTimesByDate] = useState<Record<string, string[]>>({});
   const [loadingBookedDates, setLoadingBookedDates] = useState(true);
   const [packages, setPackages] = useState<PackageOption[]>(DEFAULT_PACKAGES);
   const upcomingDates = useMemo(() => getUpcomingDates(), []);
-  const availableSlots = useMemo(() => getScheduleSlots(form.date), [form.date]);
+  const monthPages = useMemo(() => getMonthPages(upcomingDates), [upcomingDates]);
+  const [monthIndex, setMonthIndex] = useState(0);
+  const availableSlots = useMemo(() => {
+    const taken = new Set(bookedTimesByDate[form.date] ?? []);
+    return getScheduleSlots(form.date).filter((slot) => !taken.has(slot));
+  }, [form.date, bookedTimesByDate]);
 
   useEffect(() => {
     let alive = true;
@@ -180,23 +208,40 @@ export default function BookingForm({ user }: { user: User }) {
           ),
         ]);
 
-        const dates = new Set<string>();
+        const counts: Record<string, number> = {};
+        const timesByDate: Record<string, string[]> = {};
 
         lockSnapshot.docs.forEach((entry) => {
           const data = entry.data();
+          const date = String(data.date ?? '');
           const status = String(data.status ?? 'pending').toLowerCase();
-          if (data.date && status !== 'cancelled') {
-            dates.add(String(data.date));
+          if (!date || status === 'cancelled') return;
+
+          const count = Number(data.count ?? 0);
+          if (count > 0) {
+            counts[date] = Math.max(counts[date] ?? 0, count);
+          }
+
+          if (Array.isArray(data.times)) {
+            timesByDate[date] = Array.from(new Set(data.times.map((item) => String(item))));
           }
         });
 
         bookingSnapshot.docs.forEach((entry) => {
           const data = entry.data();
-          if (data.date) dates.add(String(data.date));
+          const date = String(data.date ?? '');
+          const time = String(data.time ?? '');
+          if (!date) return;
+
+          counts[date] = (counts[date] ?? 0) + 1;
+          if (time) {
+            timesByDate[date] = Array.from(new Set([...(timesByDate[date] ?? []), time]));
+          }
         });
 
         if (alive) {
-          setBookedDates(dates);
+          setBookedCounts(counts);
+          setBookedTimesByDate(timesByDate);
         }
       } catch (err) {
         console.error('Error loading booked dates:', err);
@@ -223,6 +268,12 @@ export default function BookingForm({ user }: { user: User }) {
     }
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
+
+  useEffect(() => {
+    if (form.time && !availableSlots.includes(form.time)) {
+      setForm((prev) => ({ ...prev, time: '' }));
+    }
+  }, [availableSlots, form.time]);
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (status !== 'idle') setStatus('idle');
@@ -291,8 +342,8 @@ export default function BookingForm({ user }: { user: User }) {
       return;
     }
 
-    if (bookedDates.has(date)) {
-      setErrorMsg('That day is already booked. Please choose another day.');
+    if ((bookedCounts[date] ?? 0) >= getDailyCapacity(date)) {
+      setErrorMsg('That day is already full. Please choose another day.');
       return;
     }
 
@@ -317,7 +368,13 @@ export default function BookingForm({ user }: { user: User }) {
 
       await runTransaction(db, async (tx) => {
         const lockSnap = await tx.get(lockRef);
-        if (lockSnap.exists()) {
+        const capacity = getDailyCapacity(date);
+        const existingCount = Number(lockSnap.data()?.count ?? 0);
+        const existingTimes = Array.isArray(lockSnap.data()?.times)
+          ? lockSnap.data()!.times.map((item: unknown) => String(item))
+          : [];
+
+        if (existingCount >= capacity || existingTimes.includes(time)) {
           throw new Error('date-booked');
         }
 
@@ -344,15 +401,21 @@ export default function BookingForm({ user }: { user: User }) {
           bookingId: bookingRef.id,
           bookedByUid: user.uid,
           status: 'pending',
-          createdAt: serverTimestamp(),
-        });
+          count: existingCount + 1,
+          times: [...existingTimes, time],
+          updatedAt: serverTimestamp(),
+          createdAt: lockSnap.exists() ? lockSnap.data()?.createdAt ?? serverTimestamp() : serverTimestamp(),
+        }, { merge: true });
       });
 
-      setBookedDates((prev) => {
-        const next = new Set(prev);
-        next.add(date);
-        return next;
-      });
+      setBookedCounts((prev) => ({
+        ...prev,
+        [date]: (prev[date] ?? 0) + 1,
+      }));
+      setBookedTimesByDate((prev) => ({
+        ...prev,
+        [date]: Array.from(new Set([...(prev[date] ?? []), time])),
+      }));
       setStatus('saved');
       setForm(EMPTY);
       setPhotoFile(null);
@@ -373,7 +436,7 @@ export default function BookingForm({ user }: { user: User }) {
           setErrorMsg(`Booking failed: ${err.code}`);
         }
       } else if (err instanceof Error && err.message === 'date-booked') {
-        setErrorMsg('That date was just booked by someone else. Please choose another date.');
+        setErrorMsg('That slot was just taken or the day is full. Please choose another option.');
       } else {
         setErrorMsg('Booking failed. Please try again.');
       }
@@ -424,13 +487,44 @@ export default function BookingForm({ user }: { user: User }) {
       <div className="booking-scheduler-card">
         <div className="booking-scheduler-head">
           <strong>Schedule *</strong>
-          <span>1 car per day • Weekdays: 4PM–8PM • Weekends: 8AM–8PM</span>
+          <span>Weekdays: 1 car at 4PM • Weekends: 2 cars at 8AM and 1PM</span>
         </div>
 
-        <div className="booking-date-grid">
-          {upcomingDates.map((dateValue) => {
+        <div className="booking-month-nav">
+          <button
+            type="button"
+            onClick={() => setMonthIndex((prev) => Math.max(0, prev - 1))}
+            disabled={monthIndex === 0}
+          >
+            ← Prev
+          </button>
+          <strong>{monthPages[monthIndex]?.title}</strong>
+          <button
+            type="button"
+            onClick={() => setMonthIndex((prev) => Math.min(monthPages.length - 1, prev + 1))}
+            disabled={monthIndex === monthPages.length - 1}
+          >
+            Next →
+          </button>
+        </div>
+
+        <div className="booking-weekdays-row">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+            <span key={day}>{day}</span>
+          ))}
+        </div>
+
+        <div className="booking-calendar-grid">
+          {(monthPages[monthIndex]?.cells ?? []).map((dateValue, index) => {
+            if (!dateValue) {
+              return <div key={`blank-${index}`} className="schedule-day-empty" />;
+            }
+
             const info = formatCalendarDate(dateValue);
-            const isBooked = bookedDates.has(dateValue);
+            const bookedCount = bookedCounts[dateValue] ?? 0;
+            const capacity = getDailyCapacity(dateValue);
+            const remaining = Math.max(0, capacity - bookedCount);
+            const isBooked = remaining === 0;
             const isSelected = form.date === dateValue;
 
             return (
@@ -450,8 +544,8 @@ export default function BookingForm({ user }: { user: User }) {
                 disabled={loadingBookedDates || isBooked}
               >
                 <span>{info.top}</span>
-                <strong>{info.bottom}</strong>
-                <small>{isBooked ? 'Booked' : info.openText}</small>
+                <strong>{new Date(`${dateValue}T12:00:00`).getDate()}</strong>
+                <small>{isBooked ? 'Full' : `${remaining} left`}</small>
               </button>
             );
           })}
@@ -463,27 +557,31 @@ export default function BookingForm({ user }: { user: User }) {
               Available times for {formatCalendarDate(form.date).bottom}
             </p>
             <div className="booking-slot-grid">
-              {availableSlots.map((slot) => (
-                <button
-                  key={slot}
-                  type="button"
-                  className={`schedule-slot-btn${form.time === slot ? ' selected' : ''}`}
-                  onClick={() => {
-                    setForm((prev) => ({ ...prev, time: slot }));
-                    setErrorMsg('');
-                  }}
-                >
-                  {formatTimeLabel(slot)}
-                </button>
-              ))}
+              {availableSlots.length === 0 ? (
+                <p className="dash-error">No time slots left for this date.</p>
+              ) : (
+                availableSlots.map((slot) => (
+                  <button
+                    key={slot}
+                    type="button"
+                    className={`schedule-slot-btn${form.time === slot ? ' selected' : ''}`}
+                    onClick={() => {
+                      setForm((prev) => ({ ...prev, time: slot }));
+                      setErrorMsg('');
+                    }}
+                  >
+                    {formatTimeLabel(slot)}
+                  </button>
+                ))
+              )}
             </div>
           </>
         )}
       </div>
 
-      {form.date && bookedDates.has(form.date) && (
+      {form.date && (bookedCounts[form.date] ?? 0) >= getDailyCapacity(form.date) && (
         <p style={{ color: '#c0392b', fontSize: '0.85rem', margin: 0 }}>
-          ⚠ This day is already booked. Please choose another day.
+          ⚠ This day is already full. Please choose another day.
         </p>
       )}
 

@@ -3195,10 +3195,38 @@ p {
   font-size: 0.85rem;
 }
 
-.booking-date-grid {
+.booking-month-nav {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.booking-month-nav strong {
+  text-align: center;
+}
+
+.booking-weekdays-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.booking-weekdays-row span {
+  text-align: center;
+}
+
+.booking-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
+}
+
+.schedule-day-empty {
+  min-height: 88px;
 }
 
 .booking-panel .schedule-day-btn,
@@ -3220,16 +3248,17 @@ p {
 .schedule-day-btn {
   display: grid;
   gap: 2px;
-  text-align: left;
+  text-align: center;
+  min-height: 88px;
 }
 
 .schedule-day-btn span,
 .schedule-day-btn small {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
 }
 
 .schedule-day-btn strong {
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .schedule-day-btn.selected,

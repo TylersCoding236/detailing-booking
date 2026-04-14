@@ -49,18 +49,27 @@ service cloud.firestore {
                                   // Signed-in users can read booked dates for availability checks.
                                           allow read: if request.auth != null;
 
-                                                  // Signed-in users create the lock for their own booking request.
-                                                          allow create: if
-                                                                    request.auth != null &&
-                                                                    request.resource.data.date is string &&
-                                                                    request.resource.data.date == date &&
-                                                                    request.resource.data.bookedByUid == request.auth.uid &&
-                                                                    request.resource.data.bookingId is string &&
-                                                                    request.resource.data.bookingId.size() > 0 &&
-                                                                    request.resource.data.status == 'pending';
+                                                  // Customers can create or update their own date lock while booking.
+                                                          allow create, update: if
+                                                                    isStaff() ||
+                                                                    (
+                                                                      request.auth != null &&
+                                                                      request.resource.data.date is string &&
+                                                                      request.resource.data.date == date &&
+                                                                      request.resource.data.bookedByUid == request.auth.uid &&
+                                                                      request.resource.data.bookingId is string &&
+                                                                      request.resource.data.bookingId.size() > 0 &&
+                                                                      request.resource.data.status is string &&
+                                                                      request.resource.data.count is number &&
+                                                                      request.resource.data.count >= 1 &&
+                                                                      request.resource.data.count <= 2 &&
+                                                                      request.resource.data.times is list &&
+                                                                      request.resource.data.times.size() >= 1 &&
+                                                                      request.resource.data.times.size() <= 2
+                                                                    );
 
-                                                                  // Staff can adjust lock status/date during booking management.
-                                                                          allow update, delete: if isStaff();
+                                                                  // Staff can remove locks during booking management.
+                                                                          allow delete: if isStaff();
                         }
 
                   match /pricing/{id} {
