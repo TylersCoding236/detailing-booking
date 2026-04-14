@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, query, runTransaction, where, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -36,6 +36,52 @@ type VerifiedProfile = {
   address: string;
 };
 
+function isWeekendDate(dateValue: string) {
+  const day = new Date(`${dateValue}T12:00:00`).getDay();
+  return day === 0 || day === 6;
+}
+
+function getScheduleSlots(dateValue: string): string[] {
+  if (!dateValue) return [];
+
+  const hours = isWeekendDate(dateValue)
+    ? [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    : [16, 17, 18, 19];
+
+  return hours.map((hour) => `${String(hour).padStart(2, '0')}:00`);
+}
+
+function formatTimeLabel(timeValue: string): string {
+  const [hourText, minuteText] = timeValue.split(':');
+  const hour = Number(hourText);
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const normalizedHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${normalizedHour}:${minuteText} ${suffix}`;
+}
+
+function getUpcomingDates(total = 21): string[] {
+  const dates: string[] = [];
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+
+  for (let i = 0; i < total; i += 1) {
+    const next = new Date(today);
+    next.setDate(today.getDate() + i);
+    dates.push(next.toISOString().slice(0, 10));
+  }
+
+  return dates;
+}
+
+function formatCalendarDate(dateValue: string): { top: string; bottom: string; openText: string } {
+  const date = new Date(`${dateValue}T12:00:00`);
+  return {
+    top: date.toLocaleDateString(undefined, { weekday: 'short' }),
+    bottom: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    openText: isWeekendDate(dateValue) ? '8AM–8PM' : '4PM–8PM',
+  };
+}
+
 export default function BookingForm({ user }: { user: User }) {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [status, setStatus] = useState<Status>('idle');
@@ -47,6 +93,8 @@ export default function BookingForm({ user }: { user: User }) {
   const [bookedDates, setBookedDates] = useState<Set<string>>(new Set());
   const [loadingBookedDates, setLoadingBookedDates] = useState(true);
   const [packages, setPackages] = useState<PackageOption[]>(DEFAULT_PACKAGES);
+  const upcomingDates = useMemo(() => getUpcomingDates(21), []);
+  const availableSlots = useMemo(() => getScheduleSlots(form.date), [form.date]);
 
   useEffect(() => {
     let alive = true;
@@ -119,15 +167,31 @@ export default function BookingForm({ user }: { user: User }) {
     const loadBookedDates = async () => {
       setLoadingBookedDates(true);
       try {
-        const q = query(collection(db, 'bookingLocks'));
-        const snapshot = await getDocs(q);
+        const [lockSnapshot, bookingSnapshot] = await Promise.all([
+          getDocs(collection(db, 'bookingLocks')),
+          getDocs(
+            query(
+              collection(db, 'bookings'),
+              where('status', 'in', ['pending', 'approved'])
+            )
+          ),
+        ]);
+
         const dates = new Set<string>();
-        snapshot.docs.forEach((doc) => {
-          const data = doc.data();
-          if (data.date) {
+
+        lockSnapshot.docs.forEach((entry) => {
+          const data = entry.data();
+          const status = String(data.status ?? 'pending').toLowerCase();
+          if (data.date && status !== 'cancelled') {
             dates.add(String(data.date));
           }
         });
+
+        bookingSnapshot.docs.forEach((entry) => {
+          const data = entry.data();
+          if (data.date) dates.add(String(data.date));
+        });
+
         if (alive) {
           setBookedDates(dates);
         }
@@ -219,8 +283,13 @@ export default function BookingForm({ user }: { user: User }) {
       return;
     }
 
+    if (!availableSlots.includes(time)) {
+      setErrorMsg('Please choose one of the available schedule times.');
+      return;
+    }
+
     if (bookedDates.has(date)) {
-      setErrorMsg('That date is already booked. Please choose another date.');
+      setErrorMsg('That day is already booked. Please choose another day.');
       return;
     }
 
@@ -349,24 +418,69 @@ export default function BookingForm({ user }: { user: User }) {
         </select>
       </label>
 
-      <label>
-        Date *
-        <input
-          name="date"
-          type="date"
-          value={form.date}
-          onChange={handleChange}
-          disabled={loadingBookedDates}
-          style={
-            form.date && bookedDates.has(form.date)
-              ? { borderColor: '#c0392b', backgroundColor: '#ffe5e1' }
-              : undefined
-          }
-        />
-      </label>
+      <div className="booking-scheduler-card">
+        <div className="booking-scheduler-head">
+          <strong>Schedule *</strong>
+          <span>Weekdays: 4PM–8PM • Weekends: 8AM–8PM</span>
+        </div>
+
+        <div className="booking-date-grid">
+          {upcomingDates.map((dateValue) => {
+            const info = formatCalendarDate(dateValue);
+            const isBooked = bookedDates.has(dateValue);
+            const isSelected = form.date === dateValue;
+
+            return (
+              <button
+                key={dateValue}
+                type="button"
+                className={`schedule-day-btn${isSelected ? ' selected' : ''}${isBooked ? ' booked' : ''}`}
+                onClick={() => {
+                  if (isBooked) return;
+                  setForm((prev) => ({
+                    ...prev,
+                    date: dateValue,
+                    time: prev.date === dateValue ? prev.time : '',
+                  }));
+                  setErrorMsg('');
+                }}
+                disabled={loadingBookedDates || isBooked}
+              >
+                <span>{info.top}</span>
+                <strong>{info.bottom}</strong>
+                <small>{isBooked ? 'Booked' : info.openText}</small>
+              </button>
+            );
+          })}
+        </div>
+
+        {form.date && (
+          <>
+            <p className="booking-slot-label">
+              Available times for {formatCalendarDate(form.date).bottom}
+            </p>
+            <div className="booking-slot-grid">
+              {availableSlots.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  className={`schedule-slot-btn${form.time === slot ? ' selected' : ''}`}
+                  onClick={() => {
+                    setForm((prev) => ({ ...prev, time: slot }));
+                    setErrorMsg('');
+                  }}
+                >
+                  {formatTimeLabel(slot)}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
       {form.date && bookedDates.has(form.date) && (
         <p style={{ color: '#c0392b', fontSize: '0.85rem', margin: 0 }}>
-          ⚠ This date is already booked. Please choose another date.
+          ⚠ This day is already booked. Please choose another day.
         </p>
       )}
 
@@ -388,15 +502,10 @@ export default function BookingForm({ user }: { user: User }) {
         />
       )}
 
-      <label>
-        Time *
-        <input
-          name="time"
-          type="time"
-          value={form.time}
-          onChange={handleChange}
-        />
-      </label>
+      <div className="booking-selected-summary">
+        <span>Selected day: {form.date ? formatCalendarDate(form.date).bottom : 'None'}</span>
+        <span>Selected time: {form.time ? formatTimeLabel(form.time) : 'None'}</span>
+      </div>
 
       <label>
         Notes (optional)

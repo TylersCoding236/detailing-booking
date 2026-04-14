@@ -3174,6 +3174,95 @@ p {
   resize: vertical;
 }
 
+.booking-scheduler-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.booking-scheduler-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.booking-scheduler-head span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.booking-date-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.booking-panel .schedule-day-btn,
+.booking-panel .schedule-slot-btn {
+  border: 1px solid rgba(17, 17, 17, 0.18);
+  background: #fff;
+  color: #111;
+  padding: 10px 8px;
+  border-radius: 10px;
+  transform: none;
+}
+
+.booking-panel .schedule-day-btn:hover,
+.booking-panel .schedule-slot-btn:hover {
+  background: #f7f4ee;
+  color: #111;
+}
+
+.schedule-day-btn {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.schedule-day-btn span,
+.schedule-day-btn small {
+  font-size: 0.75rem;
+}
+
+.schedule-day-btn strong {
+  font-size: 0.95rem;
+}
+
+.schedule-day-btn.selected,
+.schedule-slot-btn.selected {
+  background: #111 !important;
+  color: #fff !important;
+  border-color: #111 !important;
+}
+
+.schedule-day-btn.booked {
+  background: #f9d7d3 !important;
+  color: #8b1f13 !important;
+  border-color: #d66b5f !important;
+}
+
+.booking-slot-label {
+  margin: 0;
+  font-weight: 600;
+}
+
+.booking-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.booking-selected-summary {
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 .booking-photo-preview {
   width: min(100%, 360px);
   border-radius: 10px;

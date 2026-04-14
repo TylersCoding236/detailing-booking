@@ -400,11 +400,18 @@ export default function DetailerDashboard({
   async function approveBooking(bookingId: string) {
     resetActionMessages();
     setActionBusyId(bookingId);
+    const bookingRow = (bookings.items as Booking[]).find((b) => b.id === bookingId);
     try {
       await updateDoc(doc(db, 'bookings', bookingId), {
         status: 'approved',
         approvedAt: serverTimestamp(),
       });
+      if (bookingRow?.date) {
+        await updateDoc(doc(db, 'bookingLocks', bookingRow.date), {
+          status: 'approved',
+          updatedAt: serverTimestamp(),
+        });
+      }
       setActionSuccess('Booking approved.');
     } catch (err) {
       setActionError(
@@ -458,7 +465,9 @@ export default function DetailerDashboard({
               throw new Error('date-booked');
             }
           }
+        }
 
+        if (bookingRow.date !== nextDate || nextStatus === 'cancelled') {
           const oldLockSnap = await tx.get(oldLockRef);
           if (oldLockSnap.exists()) {
             const oldData = oldLockSnap.data();
@@ -468,13 +477,15 @@ export default function DetailerDashboard({
           }
         }
 
-        tx.set(newLockRef, {
-          date: nextDate,
-          bookingId,
-          bookedByUid: bookingRow.bookedByUid,
-          status: nextStatus,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
+        if (nextStatus !== 'cancelled') {
+          tx.set(newLockRef, {
+            date: nextDate,
+            bookingId,
+            bookedByUid: bookingRow.bookedByUid,
+            status: nextStatus,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        }
       });
       setActionSuccess('Booking updated.');
       cancelEditBooking();
